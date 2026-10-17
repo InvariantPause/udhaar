@@ -24,7 +24,7 @@ export default function AccountsScreen() {
     const mode = repo.deleteAccount(a.id);
     bump();
     haptic.press();
-    toast.show(mode === 'archived' ? `${a.name} archived — it has entries` : `${a.name} deleted`, {
+    toast.show(mode === 'archived' ? `${a.name} archived (has entries)` : `${a.name} deleted`, {
       actionLabel: 'Undo',
       onAction: () => {
         repo.restoreAccount(a.id);

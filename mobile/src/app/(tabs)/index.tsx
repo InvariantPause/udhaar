@@ -39,7 +39,7 @@ export default function TodayScreen() {
   };
 
   return (
-    <Screen title="Today" sub="Where your money is">
+    <Screen title="Today" sub="Balances & recent entries">
       {summary.length === 0 ? (
         <View style={styles.startCard}>
           <Text style={styles.startTitle}>Add a money place</Text>

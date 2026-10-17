@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ListRow } from '@/components/ListRow';
@@ -30,10 +31,10 @@ export default function MoreScreen() {
           title="Your data"
           subtitle={`${counts} · backup & restore`}
           onPress={() => router.push('/data')}
+          last
         />
-        <ListRow icon="bolt" title="Design Kit" subtitle="Mono system & motion lab" onPress={() => router.push('/design-kit')} last />
       </View>
-      <Text style={styles.footer}>Udhaar · v0.1</Text>
+      <Text style={styles.footer}>Udhaar · v{Constants.expoConfig?.version ?? '1.0.0'}</Text>
     </Screen>
   );
 }

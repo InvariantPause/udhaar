@@ -302,7 +302,7 @@ export function saveTx(input: TxInput): string {
     if (toAccountId === accountId) throw new Error('Pick two different places');
     const to = mustAccount(toAccountId);
     if (to.currency !== account.currency) {
-      throw new Error(`Different currencies don't mix — both places must be ${account.currency}`);
+      throw new Error(`Both places must use ${account.currency}`);
     }
     currency = account.currency;
   }

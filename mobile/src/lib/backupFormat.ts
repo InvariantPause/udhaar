@@ -104,7 +104,7 @@ export function buildBackupPayload(tables: BackupTables, exportedAt: number, sch
     kind: BACKUP_KIND,
     schemaVersion,
     exportedAt,
-    note: 'Amounts are integer minor units (paisa/cents). Ids are stable — import never regenerates them.',
+    note: 'Amounts are integer minor units (paisa/cents). Ids are stable across import.',
     tables: {
       accounts: tables.accounts.map((r) => ({ ...r })),
       categories: tables.categories.map((r) => ({ ...r })),
@@ -132,7 +132,7 @@ export function describeBackup(data: unknown): BackupDescription {
     const version = Number(data.schemaVersion);
     if (!Number.isFinite(version) || version < 1) return fail('This backup header is damaged');
     if (version > SCHEMA_VERSION) {
-      return fail(`This backup was made by a newer version of the app (v${version}) — update first`);
+      return fail(`This backup is from a newer version of the app. Update the app first.`);
     }
     const { tables, warnings } = normalizeNewTables(data.tables);
     return {

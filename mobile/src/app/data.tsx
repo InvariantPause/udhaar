@@ -76,7 +76,7 @@ export default function DataScreen() {
       haptic.success();
       setPending(null);
       if (snapshot) {
-        toast.show(`Replaced everything · ${result.inserted} rows`, {
+        toast.show(`Replaced · ${result.inserted} rows`, {
           actionLabel: 'Undo',
           onAction: () => {
             try {
@@ -89,7 +89,7 @@ export default function DataScreen() {
           },
         });
       } else {
-        toast.show(`Merged · ${result.inserted} rows added`);
+        toast.show(`Merged · ${result.inserted} rows`);
       }
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'Import failed');
@@ -130,7 +130,7 @@ export default function DataScreen() {
               {w}
             </Text>
           ))}
-          <Text style={styles.note}>Merge keeps what is here. Replace starts from the file.</Text>
+          <Text style={styles.note}>Merge adds to your data. Replace overwrites with the file.</Text>
           <View style={styles.actions}>
             <Button label="Merge" variant="secondary" style={styles.actionBtn} onPress={() => apply('merge')} />
             <Button label="Replace everything" variant="primary" style={styles.actionBtn} onPress={() => apply('replace')} />

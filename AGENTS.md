@@ -56,6 +56,7 @@ motion on Android, ~3-second capture. No accounts, no server. Everything deletab
 ## Commands
 - `cd mobile && npx expo start` — dev server. Phones run the **dev build** (Expo Go can no longer load the app — keyboard-controller is native; connect the installed app to the printed URL).
 - `cd mobile && npm run apk` — build the installable debug APK (toolchain: brew openjdk@17 + android-commandlinetools; first run also runs prebuild).
+- `cd mobile && npm run apk:release` — standalone release APK (embedded Hermes bundle, no Metro), copied to `mobile/release/`; signed with the debug keystore so it installs over the dev build in place (same data).
 - `cd mobile && npx tsc --noEmit` — typecheck.
 - `cd mobile && npm run lint` — lint.
 - `cd mobile && npm run db-check` — schema + money-invariant checks (node:sqlite).

@@ -60,7 +60,7 @@ export function AccountSheet({ account }: AccountSheetProps) {
         haptic.press();
         close();
         toast.show(
-          mode === 'archived' ? `${account.name} archived — it has entries` : `${account.name} deleted`,
+          mode === 'archived' ? `${account.name} archived (has entries)` : `${account.name} deleted`,
           {
             actionLabel: 'Undo',
             onAction: () => {
