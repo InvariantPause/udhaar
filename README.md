@@ -1,56 +1,70 @@
-# Welcome to your Expo app 👋
+# Udhaar
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A personal money & ledger app — track income and expenses, and keep a running
+record of **udhaar** (money you've lent to or borrowed from people).
 
-## Get started
+Phone-first, works offline, Pakistani defaults (PKR, JazzCash / Easypaisa /
+Raast), with a **3-second capture** flow and an optional Google Sheet backend.
 
-1. Install dependencies
+## What's here
 
-   ```bash
-   npm install
-   ```
+| File | What it is |
+|---|---|
+| **`mobile.html`** | The app — a single self-contained HTML file (source of truth) |
+| **`ANDROID.md`** | How to build the real APK (Capacitor) |
+| **`build-apk.sh`** | One command to rebuild the APK from `mobile.html` |
+| **`Code.gs`** | Google Apps Script backend (Sheet as source of truth) |
+| **`SETUP.md`** | Step-by-step backend + Android shortcut setup |
+| **`http-shortcuts.json`** | Importable Android quick-capture config |
+| `index.html` | Earlier desktop-oriented version (kept for reference) |
 
-2. Start the app
+## Run the app
 
-   ```bash
-   npx expo start
-   ```
+**In a browser** — just open `mobile.html`.
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+**With a local server** (recommended; `file://` blocks `localStorage`):
 
 ```bash
-npm run reset-project
+python3 -m http.server 8080
+# then open http://localhost:8080/mobile.html
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+**As an Android app** — see **[ANDROID.md](ANDROID.md)**:
 
-### Other setup steps
+```bash
+./build-apk.sh
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Features
 
-## Learn more
+- **Quick capture** — bottom sheet with a numeric keypad, one-tap categories,
+  remembered category/method/currency. Add an entry in ~3 seconds.
+- **Today** — spend so far today, this month's net, udhaar summary, alerts.
+- **Transactions** — search, filter, day-grouped list.
+- **Udhaar ledger** — per-person running balance (Lent / Borrowed / Received /
+  Paid), multi-currency, settle up.
+- **Subscriptions** — recurring bills with due dates; "Mark paid" logs the
+  expense.
+- **Budgets** — monthly limits per category with progress.
+- **Reports** — expense-by-category donut + 6-month income/expense bars.
+- **Multi-currency** — PKR (default), USD, INR, EUR.
+- **Backup** — export / import JSON.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Language & localization
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+The interface is in **English** with light Pakistani context:
+the app name **Udhaar**, PKR and local payment methods, and category nouns
+like *Kiryana*, *Aata*, *Chai*, *Zakat*, *Eidi*.
 
-## Join the community
+## Data
 
-Join our community of developers creating universal apps.
+All data is stored locally in the browser/app (`localStorage`). Nothing leaves
+the device unless you connect the Google Sheet backend (`SETUP.md`).
+Back up regularly from **More → Export JSON backup**.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Roadmap
+
+- [x] Phone-first UI (`mobile.html`)
+- [x] Google Sheet backend (`Code.gs`, `SETUP.md`, `http-shortcuts.json`)
+- [x] Offline assets + Android APK shell
+- [ ] Wire the UI to the live Sheet (GET/POST + sync status)

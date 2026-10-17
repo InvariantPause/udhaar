@@ -1,0 +1,21 @@
+{
+  "name": "udhaar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Udhaar — personal money & ledger",
+  "scripts": {
+    "sync": "cap sync android",
+    "open": "cap open android",
+    "build:apk": "cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/app": "^6.0.3",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/core": "^6.2.0",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  }
+}

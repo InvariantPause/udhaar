@@ -1,0 +1,11 @@
+{
+  "appId": "com.udhaar.app",
+  "appName": "Udhaar",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
