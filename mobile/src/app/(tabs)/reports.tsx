@@ -4,7 +4,7 @@ import { Segmented } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
 import { Money } from '@/components/Money';
 import { Screen } from '@/components/Screen';
-import { colors, radius, text as typography } from '@/design';
+import { colors, radius, space, text as typography } from '@/design';
 import { repo, useDbQuery, type CategoryTotal, type ReportTotals } from '@/lib/db';
 
 type PeriodMode = 'month' | 'last' | 'all';
@@ -66,15 +66,17 @@ export default function ReportsScreen() {
           note="Entries you add will show up here."
         />
       ) : (
-        totals.map((t) => (
-          <CurrencyReport
-            key={t.currency}
-            totals={t}
-            spentCats={spentCats.filter((c) => c.currency === t.currency)}
-            incomeCats={incomeCats.filter((c) => c.currency === t.currency)}
-            showCurrency={totals.length > 1}
-          />
-        ))
+        <View style={styles.results}>
+          {totals.map((t) => (
+            <CurrencyReport
+              key={t.currency}
+              totals={t}
+              spentCats={spentCats.filter((c) => c.currency === t.currency)}
+              incomeCats={incomeCats.filter((c) => c.currency === t.currency)}
+              showCurrency={totals.length > 1}
+            />
+          ))}
+        </View>
       )}
     </Screen>
   );
@@ -191,6 +193,8 @@ function BarRow({ label, amount, currency, max }: { label: string; amount: numbe
 }
 
 const styles = StyleSheet.create({
+  /** Zone break: the period switch is chrome, results are content. */
+  results: { marginTop: space.xl },
   block: { gap: 12, marginBottom: 18 },
   currencyTag: { ...typography.section, fontSize: 11, marginTop: 4 },
   card: {
