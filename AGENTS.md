@@ -4,10 +4,9 @@ Udhaar is a device-local money + udhaar (IOU) ledger: pure black & white, iOS-li
 motion on Android, ~3-second capture. No accounts, no server. Everything deletable.
 
 ## Repo layout
-- `mobile/` — **the real app**: React Native + Expo (SDK 57), TypeScript, expo-router. All new work happens here.
-- `mobile.html`, `app/`, `build-apk.sh` — the retired HTML/Capacitor prototype. Reference only; do not extend. Fully retires at cutover.
+- `mobile/` — **the app**: React Native + Expo (SDK 57), TypeScript, expo-router. All new work happens here.
 - `brand/` — logo sources (green launcher identity) + mono mark used inside the app.
-- `Code.gs` + `SETUP.md` + `http-shortcuts.json` — optional Google Sheet experiment. Out of scope; note the token foot-gun before resuming.
+- Retired: the HTML/Capacitor prototype (`mobile.html`, `app/`, `build-apk.sh`) and the Google Sheet experiment (`Code.gs`, `SETUP.md`, `http-shortcuts.json`) were removed — they exist only in git history.
 
 ## Agents / skills
 - Six generalized skills live in `.opencode/skills/`. Reuse before reinventing:

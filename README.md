@@ -11,8 +11,9 @@ Raast), with a **3-second capture** flow. No accounts, no server.
 | Path | What it is |
 |---|---|
 | **`mobile/`** | The app — React Native + Expo (SDK 57), TypeScript, expo-sqlite. Conventions in `AGENTS.md`. |
-| `mobile.html`, `app/`, `ANDROID.md`, `build-apk.sh` | Retired HTML/Capacitor prototype — reference only. |
-| `Code.gs`, `SETUP.md`, `http-shortcuts.json` | Optional Google Sheet quick-capture experiment — out of scope for the app. |
+| `brand/` | Logo + icon SVG sources. |
+
+Earlier prototypes (the single-file HTML app and its Capacitor wrapper) are retired — they live in the git history.
 
 ## Run the app
 

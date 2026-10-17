@@ -7,11 +7,5 @@ node_modules/
 # Build artifacts
 *.apk
 *.aab
-app/android/app/build/
-app/android/.gradle/
-app/android/build/
-app/android/local.properties
-app/android/.idea/
-app/android/app/.cxx/
 mobile/.expo/
 mobile/dist/
