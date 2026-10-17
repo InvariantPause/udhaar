@@ -17,6 +17,7 @@ motion on Android, ~3-second capture. No accounts, no server. Everything deletab
   - `web-research` — current docs, versions, comparisons
   - `release-and-changelog` — versions, changelog, tagging
   - `data-layer-design` — schema decisions
+- `impeccable` — third-party design skill (Apache-2.0) in the same folder: shape, critique, audit, and polish UI work. Chat: `/impeccable <command> <target>`; update with `npx impeccable update`. Udhaar's mono system is the brief — its defaults never override the tokens-only rule.
 - Rule: load the relevant skill *before* touching the area it covers.
 
 ## Stack (`mobile/`)
