@@ -166,6 +166,40 @@ step('undo the cascade → person and ledger return', () => {
   assert.equal(delta('ali'), 300000);
 });
 
+step('reports: spent vs lent kept separate (final state)', () => {
+  const r = one(
+    `SELECT
+       SUM(CASE WHEN type = 'expense'   THEN amount_minor ELSE 0 END) AS spent,
+       SUM(CASE WHEN type = 'income'    THEN amount_minor ELSE 0 END) AS income,
+       SUM(CASE WHEN type = 'lend'      THEN amount_minor ELSE 0 END) AS lent,
+       SUM(CASE WHEN type = 'borrow'    THEN amount_minor ELSE 0 END) AS borrowed,
+       SUM(CASE WHEN type = 'repay_in'  THEN amount_minor ELSE 0 END) AS repaidIn,
+       SUM(CASE WHEN type = 'repay_out' THEN amount_minor ELSE 0 END) AS repaidOut
+     FROM transactions
+     WHERE deleted_at IS NULL AND occurred_at >= 0 AND occurred_at < 999999`,
+  );
+  assert.equal(r.spent, 82000);
+  assert.equal(r.income, 850000);
+  assert.equal(r.lent, 500000);
+  assert.equal(r.borrowed, 120000);
+  assert.equal(r.repaidIn, 200000);
+  assert.equal(r.repaidOut, 50000);
+});
+
+step('reports: net flow equals the places\' actual movement', () => {
+  const moneyIn = 850000 + 120000 + 200000;
+  const moneyOut = 82000 + 500000 + 50000;
+  const netMovement = balance('acc-cash') - 1000000 + (balance('acc-bank') - 500000);
+  assert.equal(moneyIn - moneyOut, netMovement); // transfers cancel out inside
+});
+
+step('reports: period filter respects occurred_at', () => {
+  const r = one(
+    `SELECT COUNT(*) AS n FROM transactions WHERE deleted_at IS NULL AND occurred_at >= 5000 AND occurred_at < 999999`,
+  );
+  assert.equal(r.n, 0); // every row sits at 2000 in this scenario
+});
+
 step('amounts must be positive (CHECK constraint holds)', () => {
   assert.throws(() =>
     run(

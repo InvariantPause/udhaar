@@ -5,11 +5,13 @@ import type {
   AccountWithBalance,
   CategoryKind,
   CategoryRow,
+  CategoryTotal,
   ContactBalance,
   ContactInput,
   ContactRow,
   ContactWithBalances,
   CurrencySummary,
+  ReportTotals,
   TransactionRow,
   TxInput,
   TxView,
@@ -408,5 +410,43 @@ export function contactTotals(): ContactBalance[] {
      WHERE c.deleted_at IS NULL
      GROUP BY v.currency
      HAVING SUM(v.delta) != 0`,
+  );
+}
+
+// ---------------------------------------------------------------- reports
+
+/**
+ * Everything that happened in [from, to), one row per currency.
+ * Transfers are absent on purpose — money inside your own places isn't a flow.
+ */
+export function reportTotals(from: number, to: number): ReportTotals[] {
+  return getDb().getAllSync<ReportTotals>(
+    `SELECT currency,
+       SUM(CASE WHEN type = 'expense'   THEN amount_minor ELSE 0 END) AS spent,
+       SUM(CASE WHEN type = 'income'    THEN amount_minor ELSE 0 END) AS income,
+       SUM(CASE WHEN type = 'lend'      THEN amount_minor ELSE 0 END) AS lent,
+       SUM(CASE WHEN type = 'borrow'    THEN amount_minor ELSE 0 END) AS borrowed,
+       SUM(CASE WHEN type = 'repay_in'  THEN amount_minor ELSE 0 END) AS repaidIn,
+       SUM(CASE WHEN type = 'repay_out' THEN amount_minor ELSE 0 END) AS repaidOut
+     FROM transactions
+     WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ?
+     GROUP BY currency`,
+    [from, to],
+  );
+}
+
+/** Category breakdown for one kind and period, biggest first. */
+export function reportCategoryTotals(kind: CategoryKind, from: number, to: number): CategoryTotal[] {
+  return getDb().getAllSync<CategoryTotal>(
+    `SELECT t.currency AS currency,
+            t.category_id AS category_id,
+            c.name AS category,
+            SUM(t.amount_minor) AS total
+     FROM transactions t
+     LEFT JOIN categories c ON c.id = t.category_id
+     WHERE t.deleted_at IS NULL AND t.type = ? AND t.occurred_at >= ? AND t.occurred_at < ?
+     GROUP BY t.currency, t.category_id
+     ORDER BY total DESC`,
+    [kind, from, to],
   );
 }

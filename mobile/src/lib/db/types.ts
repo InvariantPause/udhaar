@@ -141,3 +141,23 @@ export interface ContactInput {
   phone?: string | null;
   note?: string | null;
 }
+
+/** Period aggregation for one currency. Expenses and udhaar are kept in separate columns. */
+export interface ReportTotals {
+  currency: string;
+  spent: number;
+  income: number;
+  lent: number;
+  borrowed: number;
+  repaidIn: number;
+  repaidOut: number;
+}
+
+/** One category's total in a period (expense or income rows). */
+export interface CategoryTotal {
+  currency: string;
+  category_id: string | null;
+  /** null = category row removed (or never set) */
+  category: string | null;
+  total: number;
+}
