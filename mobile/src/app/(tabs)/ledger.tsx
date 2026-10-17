@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { EmptyState } from '@/components/EmptyState';
@@ -9,18 +8,18 @@ import { Screen } from '@/components/Screen';
 import { colors, haptic, radius, text as typography } from '@/design';
 import { ContactSheet } from '@/features/ContactSheet';
 import { contactBalanceLabel } from '@/features/txDisplay';
-import { repo, useDb, type ContactWithBalances } from '@/lib/db';
+import { repo, useDb, useDbQuery, type ContactWithBalances } from '@/lib/db';
 import { useSheet } from '@/lib/sheet';
 import { useToast } from '@/lib/toast';
 
 /** Udhaar: every person and their running balance(s). Tap opens their ledger. */
 export default function LedgerScreen() {
-  const { rev, bump } = useDb();
+  const { bump } = useDb();
   const toast = useToast();
   const sheet = useSheet();
   const router = useRouter();
 
-  const contacts = useMemo(() => repo.listContacts(), [rev]);
+  const contacts = useDbQuery(() => repo.listContacts());
 
   const deleteContact = (c: ContactWithBalances) => {
     const token = repo.deleteContact(c.contact.id);
@@ -50,7 +49,7 @@ export default function LedgerScreen() {
         <EmptyState
           icon="users"
           title="No people yet"
-          note="Add someone — lend, borrow, and settle right from their page."
+          note="Add someone to start a ledger."
         />
       ) : (
         <View style={styles.section}>
@@ -75,9 +74,6 @@ export default function LedgerScreen() {
           ))}
         </View>
       )}
-      {contacts.length > 0 ? (
-        <Text style={styles.footer}>Deleting a person takes their whole ledger along — undo brings it back.</Text>
-      ) : null}
     </Screen>
   );
 }
@@ -91,5 +87,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   settled: { ...typography.small, color: colors.muted2 },
-  footer: { ...typography.caption, textAlign: 'center', marginTop: 18 },
 });

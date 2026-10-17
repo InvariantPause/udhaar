@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
@@ -8,7 +8,7 @@ import { Screen } from '@/components/Screen';
 import { colors, haptic, radius, text as typography } from '@/design';
 import { describeBackupText, exportBackupJson, runImport } from '@/lib/backup';
 import type { BackupDescription } from '@/lib/backupFormat';
-import { repo, useDb } from '@/lib/db';
+import { repo, useDb, useDbQuery } from '@/lib/db';
 import { useToast } from '@/lib/toast';
 
 interface Pending {
@@ -23,10 +23,10 @@ interface Pending {
  * so even it is undoable once from the toast.
  */
 export default function DataScreen() {
-  const { rev, bump } = useDb();
+  const { bump } = useDb();
   const toast = useToast();
 
-  const counts = useMemo(() => repo.exportCounts(), [rev]);
+  const counts = useDbQuery(() => repo.exportCounts());
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
 
@@ -104,7 +104,6 @@ export default function DataScreen() {
           {counts.places} {counts.places === 1 ? 'place' : 'places'} · {counts.people}{' '}
           {counts.people === 1 ? 'person' : 'people'} · {counts.entries} {counts.entries === 1 ? 'entry' : 'entries'}
         </Text>
-        <Text style={styles.note}>Everything lives only here. A backup file is how you move it or keep it safe.</Text>
         <Button
           label={busy === 'export' ? 'Preparing…' : 'Export backup'}
           variant="primary"
@@ -131,10 +130,7 @@ export default function DataScreen() {
               {w}
             </Text>
           ))}
-          <Text style={styles.note}>
-            Merge adds anything missing and keeps everything here. Replace deletes what is on this phone first — you can undo
-            it once from the toast.
-          </Text>
+          <Text style={styles.note}>Merge keeps what is here. Replace starts from the file.</Text>
           <View style={styles.actions}>
             <Button label="Merge" variant="secondary" style={styles.actionBtn} onPress={() => apply('merge')} />
             <Button label="Replace everything" variant="primary" style={styles.actionBtn} onPress={() => apply('replace')} />
@@ -144,7 +140,7 @@ export default function DataScreen() {
       ) : (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Restore</Text>
-          <Text style={styles.note}>Pick a backup file — from this app or the old prototype. Nothing changes until you choose.</Text>
+          <Text style={styles.note}>Pick a backup file. Nothing changes until you choose.</Text>
           <Button
             label={busy === 'import' ? 'Reading…' : 'Import backup'}
             variant="secondary"
@@ -154,8 +150,6 @@ export default function DataScreen() {
           />
         </View>
       )}
-
-      <Text style={styles.footer}>Backups never leave your hands — the file goes wherever you share it, nowhere else.</Text>
     </Screen>
   );
 }
@@ -176,5 +170,4 @@ const styles = StyleSheet.create({
   warning: { ...typography.small, color: colors.text },
   actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   actionBtn: { flex: 1 },
-  footer: { ...typography.caption, textAlign: 'center', marginTop: 10 },
 });

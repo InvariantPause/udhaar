@@ -7,7 +7,7 @@ let db: SQLite.SQLiteDatabase | null = null;
 
 /**
  * Open → migrate → seed, once per process. Everything is synchronous
- * (`*Sync`), so screens can query inside `useMemo` with zero loading states —
+ * (`*Sync`), so screens can query during render with zero loading states —
  * that is the speed budget for the 3-second capture.
  */
 export function getDb(): SQLite.SQLiteDatabase {

@@ -11,10 +11,10 @@ module.exports = defineConfig([
     files: ['**/*.{ts,tsx}'],
     rules: {
       /**
-       * The app's reactivity contract is `useMemo(fn, [rev])` — queries read
-       * SQLite inside the memo and the `rev` counter (from useDb) is what
-       * re-runs them. The rule can't see through the SQLite call and calls
-       * `rev` "unnecessary"; it is doing the entire job.
+       * The app's reactivity contract is `useDbQuery(fn)` — each query runs
+       * inside a memo keyed on the db revision counter, so every mutation
+       * re-runs it. The rule can't see through the SQLite call and flags the
+       * pattern, so it stays off here.
        */
       'react-hooks/exhaustive-deps': 'off',
 

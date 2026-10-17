@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { EmptyState } from '@/components/EmptyState';
@@ -10,7 +9,7 @@ import { colors, haptic, radius, text as typography } from '@/design';
 import { AccountSheet } from '@/features/AccountSheet';
 import { TransactionSheet } from '@/features/TransactionSheet';
 import { accountIcon, txDisplayMinor, txIcon, txShowsSign, txSubtitle, txTitle } from '@/features/txDisplay';
-import { repo, useDb, type CurrencySummary, type TxView } from '@/lib/db';
+import { repo, useDb, useDbQuery, type CurrencySummary, type TxView } from '@/lib/db';
 import { useSheet } from '@/lib/sheet';
 import { useToast } from '@/lib/toast';
 
@@ -19,12 +18,12 @@ import { useToast } from '@/lib/toast';
  * ledger. Long-press or tap an entry to edit, swipe to delete, undo via toast.
  */
 export default function TodayScreen() {
-  const { rev, bump } = useDb();
+  const { bump } = useDb();
   const toast = useToast();
   const sheet = useSheet();
 
-  const summary = useMemo(() => repo.moneySummary(), [rev]);
-  const txs = useMemo(() => repo.listRecentTxs(60), [rev]);
+  const summary = useDbQuery(() => repo.moneySummary());
+  const txs = useDbQuery(() => repo.listRecentTxs(60));
 
   const deleteTx = (t: TxView) => {
     const at = repo.deleteTx(t.id);
@@ -44,7 +43,7 @@ export default function TodayScreen() {
       {summary.length === 0 ? (
         <View style={styles.startCard}>
           <Text style={styles.startTitle}>Add a money place</Text>
-          <Text style={styles.startNote}>Cash in your pocket, the bank, a wallet — then every rupee has a home.</Text>
+          <Text style={styles.startNote}>Cash, bank, or wallet.</Text>
           <Pressable
             style={styles.startBtn}
             onPress={() => {
@@ -61,7 +60,7 @@ export default function TodayScreen() {
 
       <Text style={styles.sectionTitle}>Recent</Text>
       {txs.length === 0 ? (
-        <EmptyState icon="wallet" title="Nothing yet" note="Tap the + button — amount first, everything else is one tap." />
+        <EmptyState icon="wallet" title="Nothing yet" note="Tap + to add your first entry." />
       ) : (
         <View style={styles.section}>
           {txs.map((t, i) => (
@@ -127,7 +126,6 @@ function MoneyCard({ summary }: { summary: CurrencySummary }) {
           </View>
         ) : null}
       </View>
-      <Text style={styles.cardHint}>Lent out and borrowed are tracked separately from your places.</Text>
     </Pressable>
   );
 }
@@ -157,7 +155,6 @@ const styles = StyleSheet.create({
   },
   udhaarLabel: { ...typography.body, color: colors.muted2 },
   udhaarMoney: { fontSize: 15 },
-  cardHint: { ...typography.caption, marginTop: 12 },
   sectionTitle: { ...typography.section, marginTop: 14, marginBottom: 10 },
   section: {
     backgroundColor: colors.surface,

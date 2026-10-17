@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   Inter_400Regular,
@@ -36,29 +37,31 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <SafeAreaProvider>
-        <DbProvider>
-          {/* Toast wraps the sheet host so an undo fired while a sheet closes still paints above it. */}
-          <ToastHost>
-            <SheetHost>
-              <StatusBar style="light" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: colors.bg },
-                  animation: 'slide_from_right',
-                }}
-              >
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="accounts" />
-                <Stack.Screen name="contact/[id]" />
-                <Stack.Screen name="data" />
-                <Stack.Screen name="design-kit" />
-              </Stack>
-            </SheetHost>
-          </ToastHost>
-        </DbProvider>
-      </SafeAreaProvider>
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <DbProvider>
+            {/* Toast wraps the sheet host so an undo fired while a sheet closes still paints above it. */}
+            <ToastHost>
+              <SheetHost>
+                <StatusBar style="light" />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.bg },
+                    animation: 'slide_from_right',
+                  }}
+                >
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="accounts" />
+                  <Stack.Screen name="contact/[id]" />
+                  <Stack.Screen name="data" />
+                  <Stack.Screen name="design-kit" />
+                </Stack>
+              </SheetHost>
+            </ToastHost>
+          </DbProvider>
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

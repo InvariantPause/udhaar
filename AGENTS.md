@@ -22,6 +22,7 @@ motion on Android, ~3-second capture. No accounts, no server. Everything deletab
 ## Stack (`mobile/`)
 - Expo SDK 57 · React Native 0.86 · React 19 · TypeScript strict · expo-router (typed routes).
 - Reanimated 4 + react-native-gesture-handler for all motion; expo-haptics for touch feedback.
+- Keyboard: `react-native-keyboard-controller` — every sheet lifts frame-synced above the keyboard (`Sheet.tsx` owns it). Native module, so the phone runs a **dev build**; Expo Go is retired for testing.
 - expo-sqlite for the data layer (device-only). Inter via `@expo-google-fonts/inter`. `react-native-svg` for icons.
 - Metro only. No bundler or framework beyond Expo unless there is a measured reason.
 
@@ -48,12 +49,13 @@ motion on Android, ~3-second capture. No accounts, no server. Everything deletab
 - Nothing is hard-deleted: nullable `deleted_at` (all rows) and `archived_at` (places with entries). Deleting a person cascades their ledger (soft, one transaction) and undo restores both.
 - No FK constraints: dangling links (removed place/person) render as text, never crash. Currency always follows the place; cross-currency transfers are refused.
 - Migrations are numbered arrays in `schema.ts` (append-only, each with a rollback note). `schema.ts` must stay import-free (scripts/db-check.mjs imports it under node type-stripping).
-- Reactivity contract: screens read with `useMemo(fn, [rev])` from `useDb()`; every mutation ends with `bump()`. Keep SQLite calls synchronous.
+- Reactivity contract: screens read with `useDbQuery(fn)` — never `useMemo(fn, [rev])`, the React Compiler drops deps the callback never reads; every mutation ends with `bump()`. Keep SQLite calls synchronous.
 - `npm run db-check` replays the real schema against node:sqlite and asserts the money math — run it after any schema/repo change.
 - Backups: `src/lib/backupFormat.ts` is pure (node-testable) — versioned v1 header + legacy prototype mapping; `src/lib/backup.ts` is the db glue. Import is always describe (dry-run) → choose replace/merge; replace is undoable once via toast snapshot.
 
 ## Commands
-- `cd mobile && npx expo start` — dev server (scan with Expo Go).
+- `cd mobile && npx expo start` — dev server. Phones run the **dev build** (Expo Go can no longer load the app — keyboard-controller is native; connect the installed app to the printed URL).
+- `cd mobile && npm run apk` — build the installable debug APK (toolchain: brew openjdk@17 + android-commandlinetools; first run also runs prebuild).
 - `cd mobile && npx tsc --noEmit` — typecheck.
 - `cd mobile && npm run lint` — lint.
 - `cd mobile && npm run db-check` — schema + money-invariant checks (node:sqlite).

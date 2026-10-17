@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { EmptyState } from '@/components/EmptyState';
 import { IconButton } from '@/components/IconButton';
@@ -8,18 +7,18 @@ import { Screen } from '@/components/Screen';
 import { colors, haptic, radius, text as typography } from '@/design';
 import { AccountSheet } from '@/features/AccountSheet';
 import { accountIcon, accountKindLabel } from '@/features/txDisplay';
-import { repo, useDb, type AccountWithBalance } from '@/lib/db';
+import { repo, useDb, useDbQuery, type AccountWithBalance } from '@/lib/db';
 import { useSheet } from '@/lib/sheet';
 import { useToast } from '@/lib/toast';
 
 /** Every place money lives, with live balances. Archived places keep their history. */
 export default function AccountsScreen() {
-  const { rev, bump } = useDb();
+  const { bump } = useDb();
   const toast = useToast();
   const sheet = useSheet();
 
-  const active = useMemo(() => repo.listAccounts(), [rev]);
-  const archived = useMemo(() => repo.listAccounts({ includeArchived: true }).filter((a) => a.archived_at), [rev]);
+  const active = useDbQuery(() => repo.listAccounts());
+  const archived = useDbQuery(() => repo.listAccounts({ includeArchived: true }).filter((a) => a.archived_at));
 
   const deleteAccount = (a: AccountWithBalance) => {
     const mode = repo.deleteAccount(a.id);
@@ -83,10 +82,6 @@ export default function AccountsScreen() {
           </View>
         </>
       ) : null}
-
-      <Text style={styles.footer}>
-        Places with entries are archived, not deleted — old entries keep their place.
-      </Text>
     </Screen>
   );
 }
@@ -100,5 +95,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   sectionTitle: { ...typography.section, marginTop: 22, marginBottom: 10 },
-  footer: { ...typography.caption, textAlign: 'center', marginTop: 18 },
 });

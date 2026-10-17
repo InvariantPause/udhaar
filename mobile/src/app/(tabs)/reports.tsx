@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, Text, View, type DimensionValue } from 'react-native';
-import { Chip, ChipRow } from '@/components/Chip';
+import { Segmented } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
 import { Money } from '@/components/Money';
 import { Screen } from '@/components/Screen';
 import { colors, radius, text as typography } from '@/design';
-import { repo, useDb, type CategoryTotal, type ReportTotals } from '@/lib/db';
+import { repo, useDbQuery, type CategoryTotal, type ReportTotals } from '@/lib/db';
 
 type PeriodMode = 'month' | 'last' | 'all';
 
@@ -46,30 +46,24 @@ const currencyRank = (c: string) => {
  * visible without pretending it was consumption.
  */
 export default function ReportsScreen() {
-  const { rev } = useDb();
   const [mode, setMode] = useState<PeriodMode>('month');
 
-  const period = useMemo(() => periodRange(mode), [mode]);
-  const totals = useMemo(
-    () => repo.reportTotals(period.from, period.to).sort((a, b) => currencyRank(a.currency) - currencyRank(b.currency)),
-    [period, rev],
+  const period = periodRange(mode);
+  const totals = useDbQuery(() =>
+    repo.reportTotals(period.from, period.to).sort((a, b) => currencyRank(a.currency) - currencyRank(b.currency)),
   );
-  const spentCats = useMemo(() => repo.reportCategoryTotals('expense', period.from, period.to), [period, rev]);
-  const incomeCats = useMemo(() => repo.reportCategoryTotals('income', period.from, period.to), [period, rev]);
+  const spentCats = useDbQuery(() => repo.reportCategoryTotals('expense', period.from, period.to));
+  const incomeCats = useDbQuery(() => repo.reportCategoryTotals('income', period.from, period.to));
 
   return (
-    <Screen title="Reports" sub={period.label}>
-      <ChipRow>
-        {PERIODS.map((p) => (
-          <Chip key={p.value} label={p.label} active={p.value === mode} onPress={() => setMode(p.value)} />
-        ))}
-      </ChipRow>
+    <Screen title="Reports">
+      <Segmented options={PERIODS} value={mode} onChange={setMode} />
 
       {totals.length === 0 ? (
         <EmptyState
           icon="chart"
           title={mode === 'all' ? 'Nothing recorded yet' : `Nothing in ${period.label.toLowerCase()}`}
-          note="Entries, udhaar and repayments all show up here."
+          note="Entries you add will show up here."
         />
       ) : (
         totals.map((t) => (
@@ -107,7 +101,7 @@ function CurrencyReport({
       {showCurrency ? <Text style={styles.currencyTag}>{t.currency}</Text> : null}
 
       <View style={styles.card}>
-        <Text style={styles.cardLabel}>Spent — expenses only</Text>
+        <Text style={styles.cardLabel}>Spent</Text>
         <Money minor={t.spent} currency={t.currency} style={styles.spentAmount} />
         {spentCats.length > 0 ? (
           <View style={styles.bars}>
@@ -133,9 +127,6 @@ function CurrencyReport({
           {t.borrowed > 0 ? <FlowRow label="Borrowed in" minor={t.borrowed} currency={t.currency} /> : null}
           {t.repaidIn > 0 ? <FlowRow label="They repaid you" minor={t.repaidIn} currency={t.currency} /> : null}
           {t.repaidOut > 0 ? <FlowRow label="You repaid" minor={-t.repaidOut} currency={t.currency} /> : null}
-          <Text style={styles.cardNote}>
-            Lending moves money out of your places but stays yours — it is not spending.
-          </Text>
         </View>
       ) : null}
 
@@ -162,7 +153,6 @@ function CurrencyReport({
             ))}
           </View>
         ) : null}
-        <Text style={styles.cardNote}>Transfers between your own places never change the net.</Text>
       </View>
     </View>
   );

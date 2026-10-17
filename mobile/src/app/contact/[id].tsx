@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Button } from '@/components/Button';
@@ -11,19 +10,19 @@ import { colors, haptic, radius, text as typography } from '@/design';
 import { ContactSheet } from '@/features/ContactSheet';
 import { TransactionSheet } from '@/features/TransactionSheet';
 import { txDisplayMinor, txIcon, txShowsSign, txSubtitle, txTitle } from '@/features/txDisplay';
-import { repo, useDb, type TxView } from '@/lib/db';
+import { repo, useDb, useDbQuery, type TxView } from '@/lib/db';
 import { useSheet } from '@/lib/sheet';
 import { useToast } from '@/lib/toast';
 
 /** One person: their balance(s) per currency, settle/lend actions, full history. */
 export default function ContactScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { rev, bump } = useDb();
+  const { bump } = useDb();
   const toast = useToast();
   const sheet = useSheet();
 
-  const contact = useMemo(() => repo.getContact(id), [rev, id]);
-  const txs = useMemo(() => repo.listContactTxs(id), [rev, id]);
+  const contact = useDbQuery(() => repo.getContact(id));
+  const txs = useDbQuery(() => repo.listContactTxs(id));
 
   if (!contact) {
     return (
@@ -107,7 +106,7 @@ export default function ContactScreen() {
 
       <Text style={styles.sectionTitle}>History</Text>
       {txs.length === 0 ? (
-        <EmptyState icon="users" title="No entries yet" note="Lending, borrowing and repayments with this person show up here." />
+        <EmptyState icon="users" title="No entries yet" />
       ) : (
         <View style={styles.section}>
           {txs.map((t, i) => (

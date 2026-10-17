@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { haptic, text as typography } from '@/design';
@@ -58,24 +58,39 @@ export function ContactSheet({ contactId }: ContactSheetProps) {
     : undefined;
 
   return (
-    <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.wrap}>
-      <Text style={styles.title}>{existing ? 'Edit person' : 'New person'}</Text>
+    <View style={styles.root}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.wrap}
+        style={styles.scroll}
+      >
+        <Text style={styles.title}>{existing ? 'Edit person' : 'New person'}</Text>
 
-      <Input label="Name" value={name} onChangeText={setName} placeholder="Ali, Amma, Shop…" autoFocus={!existing} />
-      <Input label="Phone (optional)" value={phone} onChangeText={setPhone} placeholder="03xx…" keyboardType="phone-pad" />
-      <Input label="Note (optional)" value={note} onChangeText={setNote} placeholder="Chai wala near office" />
+        <Input label="Name" value={name} onChangeText={setName} placeholder="Ali, Amma, Shop…" autoFocus={!existing} />
+        <Input label="Phone (optional)" value={phone} onChangeText={setPhone} placeholder="03xx…" keyboardType="phone-pad" />
+        <Input label="Note (optional)" value={note} onChangeText={setNote} placeholder="Chai wala near office" />
 
-      <Button label={existing ? 'Save changes' : 'Add person'} variant="primary" icon="check" disabled={!canSave} onPress={onSave} />
-      {onDelete ? <Button label="Delete person" variant="ghost" icon="trash" onPress={onDelete} /> : null}
-      {existing ? (
-        <Text style={styles.hint}>Deleting takes their whole udhaar history with it — undo brings both back.</Text>
-      ) : null}
-    </ScrollView>
+        {onDelete ? <Button label="Delete person" variant="ghost" icon="trash" onPress={onDelete} /> : null}
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Button
+          label={existing ? 'Save changes' : 'Add person'}
+          variant="primary"
+          icon="check"
+          disabled={!canSave}
+          onPress={onSave}
+        />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingBottom: 10, gap: 16 },
+  root: { flexShrink: 1 },
+  scroll: { flexGrow: 0, flexShrink: 1 },
+  wrap: { paddingBottom: 4, gap: 16 },
+  footer: { paddingTop: 12 },
   title: { ...typography.h2 },
-  hint: { ...typography.caption, textAlign: 'center' },
 });

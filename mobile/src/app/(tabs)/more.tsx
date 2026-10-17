@@ -1,21 +1,19 @@
-import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { colors, radius, text as typography } from '@/design';
-import { repo, useDb } from '@/lib/db';
+import { repo, useDbQuery } from '@/lib/db';
 
 export default function MoreScreen() {
   const router = useRouter();
-  const { rev } = useDb();
 
-  const counts = useMemo(() => {
+  const counts = useDbQuery(() => {
     const accounts = repo.listAccounts().length;
     const people = repo.listContacts().length;
     const txs = repo.listRecentTxs(1000).length;
     return `${accounts} places · ${people} people · ${txs} entries`;
-  }, [rev]);
+  });
 
   return (
     <Screen title="More" sub="Settings & data">
@@ -23,7 +21,7 @@ export default function MoreScreen() {
         <ListRow
           icon="wallet"
           title="Money places"
-          subtitle="Cash, bank, wallets — balances"
+          subtitle="Cash, bank, wallets"
           onPress={() => router.push('/accounts')}
         />
         <ListRow icon="users" title="People" subtitle="Udhaar contacts & balances" onPress={() => router.push('/ledger')} />
@@ -35,7 +33,7 @@ export default function MoreScreen() {
         />
         <ListRow icon="bolt" title="Design Kit" subtitle="Mono system & motion lab" onPress={() => router.push('/design-kit')} last />
       </View>
-      <Text style={styles.footer}>Udhaar · v0.1 — device-local, no account, everything editable</Text>
+      <Text style={styles.footer}>Udhaar · v0.1</Text>
     </Screen>
   );
 }
