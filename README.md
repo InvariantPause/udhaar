@@ -17,8 +17,8 @@ Raast), with a **3-second capture** flow. No accounts, no server.
 ## Run the app
 
 ```sh
-cd mobile && npx expo start        # dev build (Metro)
-cd mobile && npm run apk:release   # standalone release APK
+npx expo start        # dev build (Metro)
+npm run apk:release   # standalone release APK
 ```
 
 ## Features
