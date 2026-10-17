@@ -2,9 +2,9 @@ import type { BottomTabBarProps } from 'expo-router/tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fonts, haptic, layout, radius, springs } from '@/design';
+import { colors, fonts, haptic, layout, springs } from '@/design';
+import { TransactionSheet } from '@/features/TransactionSheet';
 import { useSheet } from '@/lib/sheet';
-import { CapturePreview } from '@/features/CapturePreview';
 import { Icon, type IconName } from './Icon';
 
 /** Tab identity. Order: Today · Udhaar · [FAB] · Reports · More */
@@ -45,7 +45,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       <Fab
         onPress={() => {
           haptic.press();
-          sheet.open(<CapturePreview />);
+          sheet.open(<TransactionSheet />);
         }}
       />
       {right.map((t) => (

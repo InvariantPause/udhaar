@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import Svg, { Circle, Line, Path, Polygon, Polyline } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Polygon, Polyline, Rect } from 'react-native-svg';
 import { colors } from '@/design';
 
 /**
@@ -61,6 +61,7 @@ const glyphs = {
   ),
   check: <Polyline points="20 6 9 17 4 12" />,
   chevronLeft: <Polyline points="15 18 9 12 15 6" />,
+  chevronRight: <Polyline points="9 18 15 12 9 6" />,
   x: (
     <>
       <Line x1="18" y1="6" x2="6" y2="18" />
@@ -121,6 +122,29 @@ const glyphs = {
       <Path d="M20 12V8H6a2 2 0 0 1 0-4h12v4" />
       <Path d="M4 6v12a2 2 0 0 0 2 2h14v-4" />
       <Path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
+    </>
+  ),
+  bank: (
+    <>
+      <Polygon points="12 2 20 7 4 7" />
+      <Line x1="6" y1="18" x2="6" y2="11" />
+      <Line x1="10" y1="18" x2="10" y2="11" />
+      <Line x1="14" y1="18" x2="14" y2="11" />
+      <Line x1="18" y1="18" x2="18" y2="11" />
+      <Line x1="3" y1="21" x2="21" y2="21" />
+    </>
+  ),
+  phone: (
+    <>
+      <Rect x="6" y="2.5" width="12" height="19" rx="3" />
+      <Line x1="10.5" y1="18.5" x2="13.5" y2="18.5" />
+    </>
+  ),
+  box: (
+    <>
+      <Path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" />
+      <Polyline points="3 8 12 13 21 8" />
+      <Line x1="12" y1="13" x2="12" y2="21" />
     </>
   ),
 } satisfies Record<string, ReactNode>;

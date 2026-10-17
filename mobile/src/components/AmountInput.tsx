@@ -1,18 +1,18 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, fonts, radius } from '@/design';
-import { CURRENCIES, type CurrencyCode } from '@/lib/money';
+import { currencyDef } from '@/lib/money';
 
 interface AmountInputProps {
   value: string;
   onChangeText: (value: string) => void;
-  currency: CurrencyCode;
+  currency: string;
   autoFocus?: boolean;
   placeholder?: string;
 }
 
 /** The 3-second capture amount bar — native keyboard, big mono digits. */
 export function AmountInput({ value, onChangeText, currency, autoFocus = false, placeholder = '0' }: AmountInputProps) {
-  const c = CURRENCIES[currency];
+  const c = currencyDef(currency);
   return (
     <View style={styles.bar}>
       <View style={styles.chip}>

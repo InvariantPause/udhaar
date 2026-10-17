@@ -39,10 +39,23 @@ motion on Android, ~3-second capture. No accounts, no server. Everything deletab
 - UI text: English with light Pakistani context (Assalam-o-Alaikum, Eidi). No transliteration.
 - Everything is deletable: transactions, contacts (cascade their ledger), ledger entries. Soft-delete + undo.
 
+## Data model (`mobile/src/lib/db/`) — invariants, do not break
+- `accounts` (money places) + `transactions` are the single source of truth. **Balances are never stored** — both place balances and person balances come from the SQL views `v_account_deltas` / `v_contact_deltas`, so an edit or delete can never desync a total.
+- Money = integer minor units, always. Amounts are stored **positive**; the tx `type` carries the sign:
+  - out of a place: `expense`, `lend`, `repay_out`, transfer source
+  - into a place: `income`, `borrow`, `repay_in`, transfer destination
+  - person delta (positive = they owe you): `lend` +, `repay_out` +, `borrow` −, `repay_in` −
+- Nothing is hard-deleted: nullable `deleted_at` (all rows) and `archived_at` (places with entries). Deleting a person cascades their ledger (soft, one transaction) and undo restores both.
+- No FK constraints: dangling links (removed place/person) render as text, never crash. Currency always follows the place; cross-currency transfers are refused.
+- Migrations are numbered arrays in `schema.ts` (append-only, each with a rollback note). `schema.ts` must stay import-free (scripts/db-check.mjs imports it under node type-stripping).
+- Reactivity contract: screens read with `useMemo(fn, [rev])` from `useDb()`; every mutation ends with `bump()`. Keep SQLite calls synchronous.
+- `npm run db-check` replays the real schema against node:sqlite and asserts the money math — run it after any schema/repo change.
+
 ## Commands
 - `cd mobile && npx expo start` — dev server (scan with Expo Go).
 - `cd mobile && npx tsc --noEmit` — typecheck.
 - `cd mobile && npm run lint` — lint.
+- `cd mobile && npm run db-check` — schema + money-invariant checks (node:sqlite).
 
 ## Don't do
 - No emojis in UI; use the `Icon` stroke set.

@@ -13,7 +13,9 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 import { colors } from '@/design';
+import { DbProvider } from '@/lib/db';
 import { SheetHost } from '@/lib/sheet';
+import { ToastHost } from '@/lib/toast';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -35,19 +37,26 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
-        <SheetHost>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.bg },
-              animation: 'slide_from_right',
-            }}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="design-kit" />
-          </Stack>
-        </SheetHost>
+        <DbProvider>
+          {/* Toast wraps the sheet host so an undo fired while a sheet closes still paints above it. */}
+          <ToastHost>
+            <SheetHost>
+              <StatusBar style="light" />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: colors.bg },
+                  animation: 'slide_from_right',
+                }}
+              >
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="accounts" />
+                <Stack.Screen name="contact/[id]" />
+                <Stack.Screen name="design-kit" />
+              </Stack>
+            </SheetHost>
+          </ToastHost>
+        </DbProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

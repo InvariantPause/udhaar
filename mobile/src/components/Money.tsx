@@ -1,11 +1,12 @@
 import { Text, type StyleProp, type TextStyle } from 'react-native';
 import { text as typography } from '@/design';
-import { formatMoney, type CurrencyCode } from '@/lib/money';
+import { formatMoney } from '@/lib/money';
 
 interface MoneyProps {
   /** integer minor units */
   minor: number;
-  currency: CurrencyCode;
+  /** any currency code — resolves through currencyDef */
+  currency: string;
   /** force an explicit + / − */
   sign?: boolean;
   style?: StyleProp<TextStyle>;

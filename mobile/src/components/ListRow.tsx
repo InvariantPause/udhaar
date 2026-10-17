@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { colors, fonts, haptic, layout, radius, springs } from '@/design';
+import { colors, fonts, haptic, layout, springs } from '@/design';
 import { Icon, type IconName } from './Icon';
 
 /** revealed width of the delete action */

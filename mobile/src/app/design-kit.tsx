@@ -14,7 +14,7 @@ import { ListRow } from '@/components/ListRow';
 import { Money } from '@/components/Money';
 import { Screen } from '@/components/Screen';
 import { colors, fonts, haptic, radius, springs, text as typography } from '@/design';
-import { CapturePreview } from '@/features/CapturePreview';
+import { TransactionSheet } from '@/features/TransactionSheet';
 import { formatMoney, toMinor } from '@/lib/money';
 import { useSheet } from '@/lib/sheet';
 
@@ -99,7 +99,7 @@ export default function DesignKitScreen() {
       ) : null}
 
       <SectionTitle>Sheet</SectionTitle>
-      <Button variant="secondary" label="Open capture sheet" icon="plus" onPress={() => sheet.open(<CapturePreview />)} />
+      <Button variant="secondary" label="Open capture sheet" icon="plus" onPress={() => sheet.open(<TransactionSheet />)} />
 
       <SectionTitle>Motion presets</SectionTitle>
       {MOTION.map(([name, config]) => (
@@ -200,6 +200,7 @@ const ICON_NAMES: IconName[] = [
   'edit',
   'check',
   'chevronLeft',
+  'chevronRight',
   'x',
   'download',
   'upload',
@@ -211,6 +212,9 @@ const ICON_NAMES: IconName[] = [
   'cloud',
   'bolt',
   'wallet',
+  'bank',
+  'phone',
+  'box',
 ];
 
 const styles = StyleSheet.create({

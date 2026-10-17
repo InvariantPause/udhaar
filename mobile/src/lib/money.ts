@@ -20,6 +20,15 @@ export const CURRENCIES = {
 
 export type CurrencyCode = keyof typeof CURRENCIES;
 
+/**
+ * Currency rows come from the database as plain strings — resolve them here.
+ * Unknown codes (future/imported currencies) fall back to a 2-exponent def
+ * instead of crashing, and display without a symbol.
+ */
+export function currencyDef(cur: CurrencyCode | string): CurrencyDef {
+  return (CURRENCIES as Record<string, CurrencyDef>)[cur] ?? { sym: '', name: cur, exp: 2 };
+}
+
 /** "8500" → "8,500" — deterministic grouping, no Intl dependency. */
 function group(digits: string): string {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -29,16 +38,16 @@ function group(digits: string): string {
  * Parse a user-typed amount ("1,200.50") into integer minor units.
  * Tolerates any separator noise; never returns NaN.
  */
-export function toMinor(input: string | number, cur: CurrencyCode): number {
+export function toMinor(input: string | number, cur: CurrencyCode | string): number {
   const clean = String(input).replace(/[^0-9.]/g, '');
   const value = parseFloat(clean);
   if (!isFinite(value)) return 0;
-  return Math.round(value * 10 ** CURRENCIES[cur].exp);
+  return Math.round(value * 10 ** currencyDef(cur).exp);
 }
 
 /** Minor units back to a display number (for math / editing). */
-export function fromMinor(minor: number, cur: CurrencyCode): number {
-  return minor / 10 ** CURRENCIES[cur].exp;
+export function fromMinor(minor: number, cur: CurrencyCode | string): number {
+  return minor / 10 ** currencyDef(cur).exp;
 }
 
 /**
@@ -47,10 +56,10 @@ export function fromMinor(minor: number, cur: CurrencyCode): number {
  */
 export function formatMoney(
   minor: number,
-  cur: CurrencyCode,
+  cur: CurrencyCode | string,
   opts: { sign?: boolean } = {},
 ): string {
-  const { sym, exp } = CURRENCIES[cur];
+  const { sym, exp } = currencyDef(cur);
   const abs = Math.abs(Math.round(minor));
   const whole = Math.floor(abs / 10 ** exp);
   const frac = exp > 0 ? String(abs % 10 ** exp).padStart(exp, '0').replace(/0+$/, '') : '';
