@@ -401,6 +401,16 @@ export function moneySummary(): CurrencySummary[] {
   return [...byCurrency.values()].filter((s) => s.places.length > 0 || s.lent > 0 || s.borrowed > 0);
 }
 
+/** Tiny counts for the data screen — one round trip. */
+export function exportCounts(): { places: number; people: number; entries: number } {
+  const d = getDb();
+  return {
+    places: d.getFirstSync<{ n: number }>(`SELECT COUNT(*) AS n FROM accounts WHERE deleted_at IS NULL`)?.n ?? 0,
+    people: d.getFirstSync<{ n: number }>(`SELECT COUNT(*) AS n FROM contacts WHERE deleted_at IS NULL`)?.n ?? 0,
+    entries: d.getFirstSync<{ n: number }>(`SELECT COUNT(*) AS n FROM transactions WHERE deleted_at IS NULL`)?.n ?? 0,
+  };
+}
+
 /** Total outstanding per currency, across all people. */
 export function contactTotals(): ContactBalance[] {
   return getDb().getAllSync<ContactBalance>(

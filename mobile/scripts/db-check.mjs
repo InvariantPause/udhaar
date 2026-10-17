@@ -12,6 +12,7 @@
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { MIGRATIONS, SCHEMA_VERSION, seedStatements } from '../src/lib/db/schema.ts';
+import { buildBackupPayload, describeBackup, legacyToRows, normalizeNewTables } from '../src/lib/backupFormat.ts';
 
 const db = new DatabaseSync(':memory:');
 
@@ -207,6 +208,110 @@ step('amounts must be positive (CHECK constraint holds)', () => {
        VALUES ('bad', 'expense', -1, 'PKR', 2000, 2000)`,
     ),
   );
+});
+
+// ---------------------------------------------------------------- backup format
+
+const legacyBackup = {
+  transactions: [
+    { id: 'lt1', type: 'expense', amount: '1200.5', currency: 'PKR', category: 'Kiryana / Grocery', date: '2026-10-01', method: 'Cash', note: 'weekly', created: '2026-10-01T09:00:00.000Z' },
+    { id: 'lt2', type: 'income', amount: 85000, currency: 'PKR', category: 'Salary', date: '2026-10-05', method: 'Bank Transfer', created: '2026-10-05T09:00:00.000Z' },
+  ],
+  contacts: [
+    {
+      id: 'lc1',
+      name: 'Ahmed Bhai',
+      phone: '+92 300 1234567',
+      created: '2026-01-01',
+      entries: [
+        { id: 'le1', kind: 'lent', amount: 5000, currency: 'PKR', date: '2026-09-20', note: 'bike repair' },
+        { id: 'le2', kind: 'received', amount: 2000, currency: 'PKR', date: '2026-10-06' },
+      ],
+    },
+  ],
+  categories: { expense: ['Kiryana / Grocery'], income: ['Salary'] },
+  subscriptions: [{ name: 'Netflix' }],
+  budgets: [{ category: 'Chai / Food' }],
+  settings: { currency: 'PKR', method: 'Cash' },
+};
+
+step('backup: describe sees the legacy prototype file', () => {
+  const desc = describeBackup(legacyBackup);
+  assert.equal(desc.ok, true);
+  assert.equal(desc.format, 'legacy');
+  assert.equal(desc.counts.transactions, 4); // 2 spending rows + 2 udhaar entries
+  assert.equal(desc.counts.contacts, 1);
+  assert.equal(desc.counts.accounts, 2); // Cash + Bank Transfer
+  assert.equal(desc.counts.skippedSubscriptions, 1);
+  assert.equal(desc.counts.skippedBudgets, 1);
+  assert.deepEqual(desc.currencies, ['PKR']);
+});
+
+let impSeq = 0;
+const imported = legacyToRows(legacyBackup, () => `imp-${++impSeq}`, 5000);
+const impAccount = (name) => imported.tables.accounts.find((a) => a.name === name);
+
+step('backup: legacy rows map with correct signs and minor units', () => {
+  assert.equal(imported.tables.transactions.length, 4);
+  const exp = imported.tables.transactions.find((t) => t.type === 'expense');
+  assert.equal(exp.amount_minor, 120050); // 1200.50 major → minor
+  assert.equal(exp.account_id, impAccount('Cash').id);
+  assert.equal(impAccount('Cash').kind, 'cash');
+  assert.equal(impAccount('Bank Transfer').kind, 'bank');
+  const inc = imported.tables.transactions.find((t) => t.type === 'income');
+  assert.equal(inc.amount_minor, 8500000);
+  const lend = imported.tables.transactions.find((t) => t.type === 'lend');
+  assert.equal(lend.amount_minor, 500000);
+  assert.equal(lend.contact_id, imported.tables.contacts[0].id);
+  const repay = imported.tables.transactions.find((t) => t.type === 'repay_in');
+  assert.equal(repay.amount_minor, 200000);
+  const cat = imported.tables.categories.find((c) => c.name === 'Kiryana / Grocery');
+  assert.equal(exp.category_id, cat.id);
+});
+
+step('backup: imported legacy rows land in the db with right balances', () => {
+  const { tables } = imported;
+  for (const a of tables.accounts) {
+    run(
+      `INSERT OR IGNORE INTO accounts (id, name, kind, currency, opening_minor, archived_at, deleted_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      a.id, a.name, a.kind, a.currency, a.opening_minor, a.archived_at, a.deleted_at, a.created_at,
+    );
+  }
+  for (const c of tables.categories) {
+    run(`INSERT OR IGNORE INTO categories (id, name, kind, sort, deleted_at, created_at) VALUES (?, ?, ?, ?, ?, ?)`, c.id, c.name, c.kind, c.sort, c.deleted_at, c.created_at);
+  }
+  for (const c of tables.contacts) {
+    run(`INSERT OR IGNORE INTO contacts (id, name, phone, note, deleted_at, created_at) VALUES (?, ?, ?, ?, ?, ?)`, c.id, c.name, c.phone, c.note, c.deleted_at, c.created_at);
+  }
+  for (const t of tables.transactions) {
+    run(
+      `INSERT OR IGNORE INTO transactions (id, type, amount_minor, currency, account_id, to_account_id, category_id, contact_id, note, occurred_at, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      t.id, t.type, t.amount_minor, t.currency, t.account_id, t.to_account_id, t.category_id, t.contact_id, t.note, t.occurred_at, t.created_at, t.deleted_at,
+    );
+  }
+
+  assert.equal(balance(impAccount('Cash').id), -420050); // −1,200.50 spent −5,000 lent + 2,000 received back
+  assert.equal(balance(impAccount('Bank Transfer').id), 8500000);
+  assert.equal(delta(tables.contacts[0].id), 300000); // 5,000 lent − 2,000 repaid
+});
+
+step('backup: new-format round trip survives describe + normalize', () => {
+  const payload = buildBackupPayload(imported.tables, 6000, 1);
+  const desc = describeBackup(payload);
+  assert.equal(desc.ok, true);
+  assert.equal(desc.format, 'udhaar-v1');
+  assert.equal(desc.counts.transactions, 4);
+  const norm = normalizeNewTables(payload.tables);
+  assert.equal(norm.tables.transactions.length, 4);
+  assert.equal(norm.tables.accounts.length, imported.tables.accounts.length);
+});
+
+step('backup: bad files are refused with reasons', () => {
+  assert.equal(describeBackup({ hello: 'world' }).ok, false);
+  assert.equal(describeBackup('nonsense').ok, false);
+  const newer = describeBackup({ app: 'udhaar', kind: 'backup', schemaVersion: 999, tables: {} });
+  assert.equal(newer.ok, false);
+  assert.match(newer.error, /newer version/);
 });
 
 console.log('db-check: all invariants hold');

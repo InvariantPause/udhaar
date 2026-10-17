@@ -27,8 +27,13 @@ export default function MoreScreen() {
           onPress={() => router.push('/accounts')}
         />
         <ListRow icon="users" title="People" subtitle="Udhaar contacts & balances" onPress={() => router.push('/ledger')} />
-        <ListRow icon="bolt" title="Design Kit" subtitle="Mono system & motion lab" onPress={() => router.push('/design-kit')} />
-        <ListRow icon="cloud" title="Your data" subtitle={`${counts} · on this phone only`} last />
+        <ListRow
+          icon="cloud"
+          title="Your data"
+          subtitle={`${counts} · backup & restore`}
+          onPress={() => router.push('/data')}
+        />
+        <ListRow icon="bolt" title="Design Kit" subtitle="Mono system & motion lab" onPress={() => router.push('/design-kit')} last />
       </View>
       <Text style={styles.footer}>Udhaar · v0.1 — device-local, no account, everything editable</Text>
     </Screen>

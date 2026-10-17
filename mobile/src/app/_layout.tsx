@@ -52,6 +52,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="accounts" />
                 <Stack.Screen name="contact/[id]" />
+                <Stack.Screen name="data" />
                 <Stack.Screen name="design-kit" />
               </Stack>
             </SheetHost>

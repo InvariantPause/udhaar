@@ -50,6 +50,7 @@ motion on Android, ~3-second capture. No accounts, no server. Everything deletab
 - Migrations are numbered arrays in `schema.ts` (append-only, each with a rollback note). `schema.ts` must stay import-free (scripts/db-check.mjs imports it under node type-stripping).
 - Reactivity contract: screens read with `useMemo(fn, [rev])` from `useDb()`; every mutation ends with `bump()`. Keep SQLite calls synchronous.
 - `npm run db-check` replays the real schema against node:sqlite and asserts the money math — run it after any schema/repo change.
+- Backups: `src/lib/backupFormat.ts` is pure (node-testable) — versioned v1 header + legacy prototype mapping; `src/lib/backup.ts` is the db glue. Import is always describe (dry-run) → choose replace/merge; replace is undoable once via toast snapshot.
 
 ## Commands
 - `cd mobile && npx expo start` — dev server (scan with Expo Go).
