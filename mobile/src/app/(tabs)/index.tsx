@@ -111,6 +111,7 @@ function MoneyCard({ summary }: { summary: CurrencySummary }) {
         ))}
         {summary.lent > 0 || summary.borrowed > 0 ? (
           <View style={styles.udhaarBlock}>
+            <Text style={styles.udhaarTitle}>Udhaar</Text>
             {summary.lent > 0 ? (
               <View style={styles.placeRow}>
                 <Text style={styles.udhaarLabel}>Lent out</Text>
@@ -155,6 +156,7 @@ const styles = StyleSheet.create({
   },
   udhaarLabel: { ...typography.body, color: colors.muted2 },
   udhaarMoney: { fontSize: 15 },
+  udhaarTitle: { ...typography.section, fontSize: 10.5, color: colors.muted2 },
   sectionTitle: { ...typography.section, marginTop: 14, marginBottom: 10 },
   section: {
     backgroundColor: colors.surface,

@@ -1,16 +1,23 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { EmptyState } from '@/components/EmptyState';
 import { IconButton } from '@/components/IconButton';
 import { ListRow } from '@/components/ListRow';
 import { Money } from '@/components/Money';
 import { Screen } from '@/components/Screen';
-import { colors, haptic, radius, text as typography } from '@/design';
+import { colors, haptic, radius } from '@/design';
 import { ContactSheet } from '@/features/ContactSheet';
 import { contactBalanceLabel } from '@/features/txDisplay';
-import { repo, useDb, useDbQuery, type ContactWithBalances } from '@/lib/db';
+import { repo, useDb, useDbQuery, type ContactBalance, type ContactWithBalances } from '@/lib/db';
 import { useSheet } from '@/lib/sheet';
 import { useToast } from '@/lib/toast';
+
+/** One row line: words for a single balance, the full label when mixed. */
+function balanceSubtitle(balances: ContactBalance[]): string {
+  if (balances.length === 0) return 'Settled up';
+  if (balances.length > 1) return contactBalanceLabel(balances);
+  return balances[0].delta > 0 ? 'Owes you' : 'You owe';
+}
 
 /** Udhaar: every person and their running balance(s). Tap opens their ledger. */
 export default function LedgerScreen() {
@@ -58,13 +65,11 @@ export default function LedgerScreen() {
               key={c.contact.id}
               icon="users"
               title={c.contact.name}
-              subtitle={contactBalanceLabel(c.balances)}
+              subtitle={balanceSubtitle(c.balances)}
               right={
                 c.balances.length > 0 ? (
                   <Money minor={c.balances[0].delta} currency={c.balances[0].currency} sign />
-                ) : (
-                  <Text style={styles.settled}>Settled</Text>
-                )
+                ) : null
               }
               onPress={() => router.push({ pathname: '/contact/[id]', params: { id: c.contact.id } })}
               onLongPress={() => sheet.open(<ContactSheet contactId={c.contact.id} />)}
@@ -86,5 +91,4 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     overflow: 'hidden',
   },
-  settled: { ...typography.small, color: colors.muted2 },
 });
