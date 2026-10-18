@@ -9,7 +9,7 @@ import { Screen } from '@/components/Screen';
 import { colors, haptic, radius, text as typography } from '@/design';
 import { ContactSheet } from '@/features/ContactSheet';
 import { TransactionSheet } from '@/features/TransactionSheet';
-import { txDisplayMinor, txIcon, txShowsSign, txSubtitle, txTitle } from '@/features/txDisplay';
+import { txIcon, txPersonMinor, txSubtitle, txTitle } from '@/features/txDisplay';
 import { repo, useDb, useDbQuery, type TxView } from '@/lib/db';
 import { useSheet } from '@/lib/sheet';
 import { useToast } from '@/lib/toast';
@@ -33,6 +33,10 @@ export default function ContactScreen() {
   }
 
   const c = contact.contact;
+
+  // The loud button follows the balance: they owe → collect, you owe → settle.
+  const owesYou = contact.balances.length > 0 && contact.balances.every((b) => b.delta > 0);
+  const youOwe = contact.balances.length > 0 && contact.balances.every((b) => b.delta < 0);
 
   const deleteTx = (t: TxView) => {
     const at = repo.deleteTx(t.id);
@@ -75,14 +79,14 @@ export default function ContactScreen() {
         <Button
           label="They paid"
           icon="arrowDown"
-          variant="primary"
+          variant={owesYou ? 'primary' : 'secondary'}
           style={styles.actionBtn}
           onPress={() => openUdhaar('repay_in')}
         />
         <Button
           label="I paid"
           icon="arrowUp"
-          variant="secondary"
+          variant={youOwe ? 'primary' : 'secondary'}
           style={styles.actionBtn}
           onPress={() => openUdhaar('repay_out')}
         />
@@ -106,7 +110,7 @@ export default function ContactScreen() {
 
       <Text style={styles.sectionTitle}>History</Text>
       {txs.length === 0 ? (
-        <EmptyState icon="users" title="No entries yet" />
+        <EmptyState icon="users" title="No entries yet" note="Use the buttons above to record a lend, borrow or payment." />
       ) : (
         <View style={styles.section}>
           {txs.map((t, i) => (
@@ -115,7 +119,7 @@ export default function ContactScreen() {
               icon={txIcon(t)}
               title={txTitle(t)}
               subtitle={txSubtitle(t)}
-              right={<Money minor={txDisplayMinor(t)} currency={t.currency} sign={txShowsSign(t)} />}
+              right={<Money minor={txPersonMinor(t)} currency={t.currency} sign />}
               onPress={() => sheet.open(<TransactionSheet tx={t} />)}
               onLongPress={() => sheet.open(<TransactionSheet tx={t} />)}
               onDelete={() => deleteTx(t)}

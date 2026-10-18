@@ -76,6 +76,23 @@ export function txShowsSign(t: TxView): boolean {
   return t.type !== 'transfer';
 }
 
+/**
+ * Person-page view of the same entries: + means they owe you more,
+ * − means you owe them more. The mirror of the place-centric sign.
+ */
+export function txPersonMinor(t: TxView): number {
+  switch (t.type) {
+    case 'lend':
+    case 'repay_out':
+      return t.amount_minor;
+    case 'borrow':
+    case 'repay_in':
+      return -t.amount_minor;
+    default:
+      return txDisplayMinor(t);
+  }
+}
+
 /** "Owes you ₨2,000 · You owe ₨500" · "Settled up" — one line, any currencies. */
 export function contactBalanceLabel(balances: ContactBalance[]): string {
   if (balances.length === 0) return 'Settled up';
