@@ -247,6 +247,31 @@ step('backup: describe sees the legacy prototype file', () => {
   assert.deepEqual(desc.currencies, ['PKR']);
 });
 
+step('budgets: one live cap per category+currency, soft delete frees the slot', () => {
+  run(`INSERT INTO budgets (id, category_id, currency, amount_minor, created_at) VALUES ('bud-1', 'cat-kiryana', 'PKR', 1500000, 7000)`);
+  assert.throws(() =>
+    run(`INSERT INTO budgets (id, category_id, currency, amount_minor, created_at) VALUES ('bud-2', 'cat-kiryana', 'PKR', 2000000, 7000)`),
+  );
+  run(`UPDATE budgets SET deleted_at = 8000 WHERE id = 'bud-1'`);
+  run(`INSERT INTO budgets (id, category_id, currency, amount_minor, created_at) VALUES ('bud-3', 'cat-kiryana', 'PKR', 2000000, 7000)`);
+  assert.equal(one(`SELECT COUNT(*) AS n FROM budgets WHERE deleted_at IS NULL`).n, 1);
+});
+
+step('budgets: spent counts live expenses in the period only', () => {
+  run(`INSERT INTO transactions (id, type, amount_minor, currency, account_id, category_id, occurred_at, created_at) VALUES ('tx-bud', 'expense', 30000, 'PKR', 'acc-cash', 'cat-kiryana', 2500, 2500)`);
+  const spent = one(
+    `SELECT COALESCE((
+       SELECT SUM(t.amount_minor) FROM transactions t
+       WHERE t.deleted_at IS NULL AND t.type = 'expense'
+         AND t.category_id = b.category_id AND t.currency = b.currency
+         AND t.occurred_at >= 0 AND t.occurred_at < 5000
+     ), 0) AS spent
+     FROM budgets b WHERE b.id = 'bud-3'`,
+  ).spent;
+  assert.equal(spent, 30000);
+  run(`DELETE FROM transactions WHERE id = 'tx-bud'`);
+});
+
 let impSeq = 0;
 const imported = legacyToRows(legacyBackup, () => `imp-${++impSeq}`, 5000);
 const impAccount = (name) => imported.tables.accounts.find((a) => a.name === name);
@@ -304,6 +329,22 @@ step('backup: new-format round trip survives describe + normalize', () => {
   const norm = normalizeNewTables(payload.tables);
   assert.equal(norm.tables.transactions.length, 4);
   assert.equal(norm.tables.accounts.length, imported.tables.accounts.length);
+});
+
+step('backup: budgets survive the round trip and damaged rows are dropped', () => {
+  const tables = {
+    ...imported.tables,
+    budgets: [{ id: 'bud-x', category_id: 'cat-kiryana', currency: 'PKR', amount_minor: 1500000, deleted_at: null, created_at: 7000 }],
+  };
+  const payload = buildBackupPayload(tables, 7000, SCHEMA_VERSION);
+  const desc = describeBackup(payload);
+  assert.equal(desc.counts.budgets, 1);
+  const norm = normalizeNewTables(payload.tables);
+  assert.equal(norm.tables.budgets.length, 1);
+  assert.equal(norm.tables.budgets[0].amount_minor, 1500000);
+  const damaged = normalizeNewTables({ budgets: [{ id: 'y', category_id: '', amount_minor: 0 }] });
+  assert.equal(damaged.tables.budgets.length, 0);
+  assert.match(damaged.warnings.join(' '), /budget/);
 });
 
 step('backup: bad files are refused with reasons', () => {

@@ -1,5 +1,7 @@
 /**
- * Schema v1 — tables, views, seeds. Pure SQL strings only.
+ * Schema — tables, views, seeds. Pure SQL strings only.
+ * Migrations are append-only numbered arrays (index = user_version − 1),
+ * each carrying its own rollback note.
  *
  * This file deliberately has ZERO runtime imports so that scripts/db-check.mjs
  * can import it under `node --experimental-strip-types` and replay the exact
@@ -16,7 +18,7 @@
  *   places) are nullable timestamps — the only "deleted" flags allowed.
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** Migration n (index n-1) runs in order against `PRAGMA user_version`. */
 export const MIGRATIONS: string[][] = [
@@ -108,6 +110,25 @@ export const MIGRATIONS: string[][] = [
       WHERE deleted_at IS NULL AND contact_id IS NOT NULL
     )
     GROUP BY id, currency;
+    `,
+  ],
+  [
+    // ---- v2: monthly budgets ------------------------------------------------
+    // Rollback note: dev-only rollback is
+    // "DROP INDEX idx_budgets_cat_cur; DROP TABLE budgets;" plus
+    // PRAGMA user_version = 1. Never ship a rollback that drops user rows.
+    `
+    CREATE TABLE budgets (
+      id           TEXT PRIMARY KEY,
+      category_id  TEXT NOT NULL,
+      currency     TEXT NOT NULL,
+      amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
+      deleted_at   INTEGER,
+      created_at   INTEGER NOT NULL
+    );
+
+    CREATE UNIQUE INDEX idx_budgets_cat_cur
+      ON budgets (category_id, currency) WHERE deleted_at IS NULL;
     `,
   ],
 ];

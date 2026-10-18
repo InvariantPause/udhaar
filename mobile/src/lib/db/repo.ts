@@ -3,6 +3,8 @@ import type {
   AccountInput,
   AccountRow,
   AccountWithBalance,
+  BudgetInput,
+  BudgetWithSpent,
   CategoryKind,
   CategoryRow,
   CategoryTotal,
@@ -398,6 +400,83 @@ export function deleteTx(id: string): number {
 
 export function restoreTx(id: string, at: number): void {
   getDb().runSync(`UPDATE transactions SET deleted_at = NULL WHERE id = ? AND deleted_at = ?`, [id, at]);
+}
+
+// ---------------------------------------------------------------- budgets
+
+/**
+ * Monthly caps per category + currency, with what's been spent in [from, to).
+ * Currency-bound on purpose: the app never converts, so a cap only ever
+ * tracks expenses recorded in the same currency.
+ */
+export function listBudgets(from: number, to: number): BudgetWithSpent[] {
+  return getDb().getAllSync<BudgetWithSpent>(
+    `SELECT b.id, b.category_id, b.currency, b.amount_minor, b.deleted_at, b.created_at,
+            c.name AS category_name,
+            COALESCE((
+              SELECT SUM(t.amount_minor) FROM transactions t
+              WHERE t.deleted_at IS NULL AND t.type = 'expense'
+                AND t.category_id = b.category_id AND t.currency = b.currency
+                AND t.occurred_at >= ? AND t.occurred_at < ?
+            ), 0) AS spent
+     FROM budgets b
+     LEFT JOIN categories c ON c.id = b.category_id
+     WHERE b.deleted_at IS NULL
+     ORDER BY (c.sort IS NULL), COALESCE(c.sort, 0), b.created_at`,
+    [from, to],
+  );
+}
+
+/**
+ * One live budget per category + currency. Editing one keeps its id; moving
+ * it to another category or currency retires the old row first.
+ */
+export function saveBudget(input: BudgetInput): string {
+  const d = getDb();
+  const amount = Math.round(Math.abs(input.amount_minor));
+  if (!(amount > 0)) throw new Error('Enter an amount first');
+  const now = Date.now();
+
+  const orig = input.id
+    ? d.getFirstSync<{ id: string; category_id: string; currency: string }>(
+        `SELECT id, category_id, currency FROM budgets WHERE id = ? AND deleted_at IS NULL`,
+        [input.id],
+      )
+    : null;
+  const keepsId = !!orig && orig.category_id === input.category_id && orig.currency === input.currency;
+  const existing = keepsId
+    ? null
+    : d.getFirstSync<{ id: string }>(
+        `SELECT id FROM budgets WHERE deleted_at IS NULL AND category_id = ? AND currency = ?`,
+        [input.category_id, input.currency],
+      );
+
+  const id = (keepsId && orig ? orig.id : null) ?? existing?.id ?? newId();
+
+  d.withTransactionSync(() => {
+    if (orig && !keepsId) d.runSync(`UPDATE budgets SET deleted_at = ? WHERE id = ?`, [now, orig.id]);
+    if (existing || keepsId) {
+      d.runSync(`UPDATE budgets SET amount_minor = ? WHERE id = ?`, [amount, id]);
+    } else {
+      d.runSync(
+        `INSERT INTO budgets (id, category_id, currency, amount_minor, created_at) VALUES (?, ?, ?, ?, ?)`,
+        [id, input.category_id, input.currency, amount, now],
+      );
+    }
+  });
+
+  return id;
+}
+
+/** Soft-delete; returns the timestamp that undo needs. */
+export function deleteBudget(id: string): number {
+  const at = Date.now();
+  getDb().runSync(`UPDATE budgets SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`, [at, id]);
+  return at;
+}
+
+export function restoreBudget(id: string, at: number): void {
+  getDb().runSync(`UPDATE budgets SET deleted_at = NULL WHERE id = ? AND deleted_at = ?`, [id, at]);
 }
 
 // ---------------------------------------------------------------- summary

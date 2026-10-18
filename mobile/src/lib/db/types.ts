@@ -173,3 +173,28 @@ export interface TxSearchOpts {
   to?: number;
   limit?: number;
 }
+
+export interface BudgetRow {
+  id: string;
+  category_id: string;
+  currency: string;
+  amount_minor: number;
+  deleted_at: number | null;
+  created_at: number;
+}
+
+export interface BudgetInput {
+  /** omit to create; pass an existing id to edit it */
+  id?: string;
+  category_id: string;
+  currency: string;
+  amount_minor: number;
+}
+
+/** A monthly cap joined with what's been spent in the period it was read for. */
+export interface BudgetWithSpent extends BudgetRow {
+  /** null when the category row is gone */
+  category_name: string | null;
+  /** expenses for this category + currency inside the period */
+  spent: number;
+}

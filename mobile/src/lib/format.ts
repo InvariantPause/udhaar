@@ -46,6 +46,15 @@ export function olderThan(ts: number, days: number): boolean {
   return startOfDay(Date.now()) - startOfDay(ts) > days * DAY;
 }
 
+/** [this month's start, next month's start) — budgets and recurring periods. */
+export function monthRange(): { from: number; to: number } {
+  const now = new Date();
+  return {
+    from: new Date(now.getFullYear(), now.getMonth(), 1).getTime(),
+    to: new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime(),
+  };
+}
+
 /** The last `count` days (today first) for the capture sheet's date strip. */
 export function recentDays(count = 7): { ts: number; label: string }[] {
   const out: { ts: number; label: string }[] = [];

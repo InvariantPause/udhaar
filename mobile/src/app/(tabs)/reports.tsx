@@ -4,8 +4,10 @@ import { Segmented } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
 import { Money } from '@/components/Money';
 import { Screen } from '@/components/Screen';
-import { colors, radius, space, text as typography } from '@/design';
-import { repo, useDbQuery, type CategoryTotal, type ReportTotals } from '@/lib/db';
+import { colors, fonts, radius, space, text as typography } from '@/design';
+import { repo, useDbQuery, type BudgetWithSpent, type CategoryTotal, type ReportTotals } from '@/lib/db';
+import { monthRange } from '@/lib/format';
+import { formatMoney } from '@/lib/money';
 
 type PeriodMode = 'month' | 'last' | 'all';
 
@@ -54,6 +56,9 @@ export default function ReportsScreen() {
   );
   const spentCats = useDbQuery(() => repo.reportCategoryTotals('expense', period.from, period.to));
   const incomeCats = useDbQuery(() => repo.reportCategoryTotals('income', period.from, period.to));
+  // Caps only track the current month, whichever period is being shown.
+  const month = monthRange();
+  const budgets = useDbQuery(() => repo.listBudgets(month.from, month.to));
 
   return (
     <Screen title="Reports">
@@ -73,6 +78,7 @@ export default function ReportsScreen() {
               totals={t}
               spentCats={spentCats.filter((c) => c.currency === t.currency)}
               incomeCats={incomeCats.filter((c) => c.currency === t.currency)}
+              budgets={mode === 'month' ? budgets.filter((b) => b.currency === t.currency) : []}
               showCurrency={totals.length > 1}
             />
           ))}
@@ -86,11 +92,13 @@ function CurrencyReport({
   totals: t,
   spentCats,
   incomeCats,
+  budgets,
   showCurrency,
 }: {
   totals: ReportTotals;
   spentCats: CategoryTotal[];
   incomeCats: CategoryTotal[];
+  budgets: BudgetWithSpent[];
   showCurrency: boolean;
 }) {
   const moneyIn = t.income + t.borrowed + t.repaidIn;
@@ -114,6 +122,7 @@ function CurrencyReport({
                 amount={c.total}
                 currency={t.currency}
                 max={spentCats[0]?.total ?? 1}
+                budget={budgets.find((b) => b.category_id === c.category_id)?.amount_minor}
               />
             ))}
           </View>
@@ -174,9 +183,25 @@ function FlowRow({ label, minor, currency }: { label: string; minor: number; cur
   );
 }
 
-function BarRow({ label, amount, currency, max }: { label: string; amount: number; currency: string; max: number }) {
-  const pct = max > 0 ? Math.max((amount / max) * 100, 2) : 2;
-  const width = `${pct}%` as DimensionValue;
+function BarRow({
+  label,
+  amount,
+  currency,
+  max,
+  budget,
+}: {
+  label: string;
+  amount: number;
+  currency: string;
+  max: number;
+  /** monthly cap, when this category has one — the bar then tracks it */
+  budget?: number;
+}) {
+  // With a cap the bar measures against it; otherwise against the biggest row.
+  const scale = budget ?? max;
+  const pct = scale > 0 ? Math.max((amount / scale) * 100, 2) : 2;
+  const width = `${Math.min(pct, 100)}%` as DimensionValue;
+  const over = budget != null && amount > budget;
   return (
     <View style={styles.barRow}>
       <View style={styles.barHead}>
@@ -188,6 +213,13 @@ function BarRow({ label, amount, currency, max }: { label: string; amount: numbe
       <View style={styles.barTrack}>
         <View style={[styles.barFill, { width }]} />
       </View>
+      {budget != null ? (
+        over ? (
+          <Text style={styles.barOver}>{formatMoney(amount - budget, currency)} over budget</Text>
+        ) : (
+          <Text style={styles.barBudget}>{formatMoney(budget - amount, currency)} left</Text>
+        )
+      ) : null}
     </View>
   );
 }
@@ -216,6 +248,8 @@ const styles = StyleSheet.create({
   barAmount: { fontSize: 14 },
   barTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surface3, overflow: 'hidden' },
   barFill: { height: 6, borderRadius: 3, backgroundColor: colors.white },
+  barBudget: { ...typography.caption },
+  barOver: { ...typography.caption, fontFamily: fonts.semibold, color: colors.text },
   flowRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   flowLabel: { ...typography.body, color: colors.muted },
   flowMoney: { fontSize: 16 },

@@ -27,6 +27,12 @@ export default function MoreScreen() {
         />
         <ListRow icon="users" title="People" subtitle="Udhaar contacts & balances" onPress={() => router.push('/ledger')} />
         <ListRow
+          icon="target"
+          title="Budgets"
+          subtitle="Monthly caps per category"
+          onPress={() => router.push('/budgets')}
+        />
+        <ListRow
           icon="cloud"
           title="Your data"
           subtitle={`${counts} · backup & restore`}

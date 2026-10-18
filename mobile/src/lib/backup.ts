@@ -15,6 +15,7 @@ export function exportBackupJson(): { fileName: string; json: string } {
     categories: d.getAllSync(`SELECT * FROM categories ORDER BY kind, sort`),
     contacts: d.getAllSync(`SELECT * FROM contacts ORDER BY created_at`),
     transactions: d.getAllSync(`SELECT * FROM transactions ORDER BY occurred_at, created_at`),
+    budgets: d.getAllSync(`SELECT * FROM budgets ORDER BY created_at`),
   };
   const payload = buildBackupPayload(tables, Date.now(), SCHEMA_VERSION);
   const date = new Date().toISOString().slice(0, 10);
@@ -38,7 +39,8 @@ export interface ImportResult {
 /**
  * Apply a validated backup. Merge keeps existing rows (stable ids are never
  * regenerated; same id = same row, so re-importing is idempotent). Replace
- * clears the four data tables in one transaction first.
+ * clears the data tables — budgets included — in one transaction first; a
+ * v1 file simply carries no budgets, so a replace from one leaves none.
  */
 export function runImport(json: string, mode: 'replace' | 'merge'): ImportResult {
   const parsed: unknown = JSON.parse(json);
@@ -58,7 +60,7 @@ export function runImport(json: string, mode: 'replace' | 'merge'): ImportResult
 
   d.withTransactionSync(() => {
     if (mode === 'replace') {
-      d.execSync(`DELETE FROM transactions; DELETE FROM contacts; DELETE FROM categories; DELETE FROM accounts;`);
+      d.execSync(`DELETE FROM transactions; DELETE FROM contacts; DELETE FROM categories; DELETE FROM accounts; DELETE FROM budgets;`);
     }
     for (const a of tables.accounts) {
       add(
@@ -91,6 +93,14 @@ export function runImport(json: string, mode: 'replace' | 'merge'): ImportResult
           `INSERT OR IGNORE INTO transactions (id, type, amount_minor, currency, account_id, to_account_id, category_id, contact_id, note, occurred_at, created_at, deleted_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [t.id, t.type, t.amount_minor, t.currency, t.account_id, t.to_account_id, t.category_id, t.contact_id, t.note, t.occurred_at, t.created_at, t.deleted_at],
+        ).changes,
+      );
+    }
+    for (const b of tables.budgets ?? []) {
+      add(
+        d.runSync(
+          `INSERT OR IGNORE INTO budgets (id, category_id, currency, amount_minor, deleted_at, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          [b.id, b.category_id, b.currency, b.amount_minor, b.deleted_at, b.created_at],
         ).changes,
       );
     }

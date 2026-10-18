@@ -11,6 +11,8 @@ import { AccountSheet } from '@/features/AccountSheet';
 import { TransactionSheet } from '@/features/TransactionSheet';
 import { accountIcon, txDisplayMinor, txIcon, txShowsSign, txSubtitle, txTitle } from '@/features/txDisplay';
 import { repo, useDb, useDbQuery, type CurrencySummary, type TxView } from '@/lib/db';
+import { monthRange } from '@/lib/format';
+import { formatMoney } from '@/lib/money';
 import { useSheet } from '@/lib/sheet';
 import { useToast } from '@/lib/toast';
 
@@ -26,6 +28,11 @@ export default function TodayScreen() {
 
   const summary = useDbQuery(() => repo.moneySummary());
   const txs = useDbQuery(() => repo.listRecentTxs(60));
+  // Caps that are 80%+ through the month — a quiet nudge, not a nag.
+  const { from, to } = monthRange();
+  const budgetWatch = useDbQuery(() => repo.listBudgets(from, to)).filter(
+    (b) => b.spent >= b.amount_minor * 0.8,
+  );
 
   const deleteTx = (t: TxView) => {
     const at = repo.deleteTx(t.id);
@@ -63,6 +70,30 @@ export default function TodayScreen() {
       ) : (
         summary.map((s) => <MoneyCard key={s.currency} summary={s} />)
       )}
+
+      {budgetWatch.length > 0 ? (
+        <Pressable
+          style={styles.watchCard}
+          onPress={() => {
+            haptic.tap();
+            router.push('/reports');
+          }}
+        >
+          <Text style={styles.watchTitle}>Budget watch</Text>
+          {budgetWatch.map((b) => (
+            <View key={b.id} style={styles.watchRow}>
+              <Text style={styles.watchName} numberOfLines={1}>
+                {b.category_name ?? 'Removed category'}
+              </Text>
+              <Text style={styles.watchValue}>
+                {b.spent > b.amount_minor
+                  ? `${formatMoney(b.spent - b.amount_minor, b.currency)} over`
+                  : `${Math.round((b.spent / b.amount_minor) * 100)}%`}
+              </Text>
+            </View>
+          ))}
+        </Pressable>
+      ) : null}
 
       <Text style={styles.sectionTitle}>Recent</Text>
       {txs.length === 0 ? (
@@ -164,6 +195,18 @@ const styles = StyleSheet.create({
   udhaarMoney: { fontSize: 15 },
   udhaarTitle: { ...typography.section, fontSize: 10.5, color: colors.muted2 },
   sectionTitle: { ...typography.section, marginTop: 14, marginBottom: 10 },
+  watchCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    padding: 18,
+    gap: 8,
+  },
+  watchTitle: { ...typography.section, fontSize: 10.5, color: colors.muted2 },
+  watchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  watchName: { ...typography.body, color: colors.muted, flex: 1, minWidth: 0 },
+  watchValue: { ...typography.label },
   section: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

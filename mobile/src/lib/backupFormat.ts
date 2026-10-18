@@ -60,11 +60,21 @@ export interface BackupTxRow {
   deleted_at: number | null;
 }
 
+export interface BackupBudgetRow {
+  id: string;
+  category_id: string;
+  currency: string;
+  amount_minor: number;
+  deleted_at: number | null;
+  created_at: number;
+}
+
 export interface BackupTables {
   accounts: BackupAccountRow[];
   categories: BackupCategoryRow[];
   contacts: BackupContactRow[];
   transactions: BackupTxRow[];
+  budgets: BackupBudgetRow[];
 }
 
 export interface BackupFile {
@@ -81,6 +91,7 @@ export interface BackupCounts {
   categories: number;
   contacts: number;
   transactions: number;
+  budgets: number;
   skippedSubscriptions: number;
   skippedBudgets: number;
 }
@@ -95,7 +106,7 @@ export interface BackupDescription {
 }
 
 export function emptyCounts(): BackupCounts {
-  return { accounts: 0, categories: 0, contacts: 0, transactions: 0, skippedSubscriptions: 0, skippedBudgets: 0 };
+  return { accounts: 0, categories: 0, contacts: 0, transactions: 0, budgets: 0, skippedSubscriptions: 0, skippedBudgets: 0 };
 }
 
 export function buildBackupPayload(tables: BackupTables, exportedAt: number, schemaVersion = SCHEMA_VERSION): BackupFile {
@@ -110,6 +121,7 @@ export function buildBackupPayload(tables: BackupTables, exportedAt: number, sch
       categories: tables.categories.map((r) => ({ ...r })),
       contacts: tables.contacts.map((r) => ({ ...r })),
       transactions: tables.transactions.map((r) => ({ ...r })),
+      budgets: (tables.budgets ?? []).map((r) => ({ ...r })),
     },
   };
 }
@@ -138,7 +150,14 @@ export function describeBackup(data: unknown): BackupDescription {
     return {
       ok: true,
       format: 'udhaar-v1',
-      counts: { ...emptyCounts(), accounts: tables.accounts.length, categories: tables.categories.length, contacts: tables.contacts.length, transactions: tables.transactions.length },
+      counts: {
+        ...emptyCounts(),
+        accounts: tables.accounts.length,
+        categories: tables.categories.length,
+        contacts: tables.contacts.length,
+        transactions: tables.transactions.length,
+        budgets: tables.budgets.length,
+      },
       currencies: currenciesOf(tables),
       warnings,
     };
@@ -257,7 +276,28 @@ export function normalizeNewTables(raw: unknown): { tables: BackupTables; warnin
   }
   if (bad) warnings.push(`Skipped ${bad} damaged entry rows`);
 
-  return { tables: { accounts, categories, contacts, transactions }, warnings };
+  const budgets: BackupBudgetRow[] = [];
+  bad = 0;
+  for (const r of records(src.budgets)) {
+    const id = str(r.id);
+    const categoryId = str(r.category_id);
+    const amount = int(r.amount_minor, 0);
+    if (!id || !categoryId || !(amount > 0)) {
+      bad++;
+      continue;
+    }
+    budgets.push({
+      id,
+      category_id: categoryId,
+      currency: str(r.currency) || 'PKR',
+      amount_minor: amount,
+      deleted_at: nullableInt(r.deleted_at),
+      created_at: int(r.created_at, 0),
+    });
+  }
+  if (bad) warnings.push(`Skipped ${bad} damaged budget rows`);
+
+  return { tables: { accounts, categories, contacts, transactions, budgets }, warnings };
 }
 
 // ---------------------------------------------------------------- legacy format
@@ -416,7 +456,7 @@ export function legacyToRows(
 
   if (skipped > 0) warnings.push(`Skipped ${skipped} damaged rows from the old backup`);
 
-  return { tables: { accounts, categories, contacts, transactions }, warnings };
+  return { tables: { accounts, categories, contacts, transactions, budgets: [] }, warnings };
 }
 
 // ---------------------------------------------------------------- helpers
