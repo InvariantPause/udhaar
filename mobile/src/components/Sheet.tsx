@@ -26,7 +26,7 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
   const [mounted, setMounted] = useState(visible);
   const { height: winH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { progress: keyboardProgress } = useReanimatedKeyboardAnimation();
+  const { progress: keyboardProgress, height: keyboardHeight } = useReanimatedKeyboardAnimation();
   const progress = useSharedValue(0);
   const dragY = useSharedValue(0);
   const basePad = Math.max(insets.bottom, 14) + 8;
@@ -75,6 +75,16 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
   const padStyle = useAnimatedStyle(() => ({
     paddingBottom: interpolate(keyboardProgress.value, [0, 1], [basePad, 8]),
   }));
+  // Cap in pixels on purpose: a percentage maxHeight resolves against the KAV
+  // content box, which the keyboard shrinks. Following the keyboard keeps the
+  // panel below the top inset even for the tallest sheet (Udhaar mode) — the
+  // body shrinks and scrolls instead of sliding the grabber off-screen.
+  // The reanimated height is negative while the keyboard is open, hence abs().
+  const fitStyle = useAnimatedStyle(() => {
+    const kb = Math.abs(keyboardHeight.value);
+    const avail = winH - kb - insets.top - 12;
+    return { maxHeight: Math.min(winH * 0.88, Math.max(avail, winH * 0.35)) };
+  });
 
   if (!mounted) return null;
 
@@ -84,10 +94,7 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close sheet" />
       </Animated.View>
       <KeyboardAvoidingView behavior="padding" style={styles.avoider} pointerEvents="box-none">
-        {/* Cap in pixels on purpose: a percentage maxHeight resolves against the
-            KAV content box, which the keyboard shrinks — the panel would then
-            squeeze its footer instead of using the space above the keyboard. */}
-        <Animated.View style={[styles.panel, { maxHeight: winH * 0.88 }, padStyle, panelStyle]}>
+        <Animated.View style={[styles.panel, fitStyle, padStyle, panelStyle]}>
           <GestureDetector gesture={pan}>
             <View style={styles.grabZone}>
               <View style={styles.grabber} />
@@ -127,5 +134,5 @@ const styles = StyleSheet.create({
   },
   grabZone: { paddingTop: 12, paddingBottom: 14, alignItems: 'center' },
   grabber: { width: 40, height: 4, borderRadius: 4, backgroundColor: colors.line2 },
-  content: { paddingHorizontal: 18, paddingBottom: 6 },
+  content: { flexShrink: 1, paddingHorizontal: 18, paddingBottom: 6 },
 });
