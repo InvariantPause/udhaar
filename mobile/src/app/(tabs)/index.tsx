@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { EmptyState } from '@/components/EmptyState';
 import { Icon } from '@/components/Icon';
+import { IconButton } from '@/components/IconButton';
 import { ListRow } from '@/components/ListRow';
 import { Money } from '@/components/Money';
 import { Screen } from '@/components/Screen';
@@ -18,6 +19,7 @@ import { useToast } from '@/lib/toast';
  * ledger. Long-press or tap an entry to edit, swipe to delete, undo via toast.
  */
 export default function TodayScreen() {
+  const router = useRouter();
   const { bump } = useDb();
   const toast = useToast();
   const sheet = useSheet();
@@ -39,7 +41,11 @@ export default function TodayScreen() {
   };
 
   return (
-    <Screen title="Today" sub="Balances & recent entries">
+    <Screen
+      title="Today"
+      sub="Balances & recent entries"
+      right={<IconButton icon="search" label="Search entries" onPress={() => router.push('/search')} />}
+    >
       {summary.length === 0 ? (
         <View style={styles.startCard}>
           <Text style={styles.startTitle}>Add a money place</Text>

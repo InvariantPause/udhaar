@@ -14,6 +14,7 @@ import type {
   ReportTotals,
   TransactionRow,
   TxInput,
+  TxSearchOpts,
   TxView,
 } from './types';
 
@@ -269,6 +270,53 @@ export function listContactTxs(contactId: string, limit = 200): TxView[] {
   return getDb().getAllSync<TxView>(
     `${TX_SELECT} WHERE t.deleted_at IS NULL AND t.contact_id = ? ORDER BY t.occurred_at DESC, t.created_at DESC LIMIT ?`,
     [contactId, limit],
+  );
+}
+
+/**
+ * Entry search — free text over note, people, places, categories, and the
+ * amount itself (SQLite LIKE is case-insensitive for ASCII).
+ *
+ * Amounts match the way they're typed: "250", "1,500" and "5.5" all hit via
+ * printf("%.2f") over the stored minor units — no conversion guesswork in
+ * JS. The app only ships 2-digit currencies (paisa/cents = exponent 2).
+ */
+export function searchTxs(opts: TxSearchOpts): TxView[] {
+  const clauses: string[] = ['t.deleted_at IS NULL'];
+  const params: (string | number)[] = [];
+
+  const kind = opts.kind ?? 'all';
+  if (kind === 'udhaar') {
+    clauses.push(`t.type IN ('lend','borrow','repay_in','repay_out')`);
+  } else if (kind !== 'all') {
+    clauses.push('t.type = ?');
+    params.push(kind);
+  }
+  if (opts.from != null) {
+    clauses.push('t.occurred_at >= ?');
+    params.push(opts.from);
+  }
+  if (opts.to != null) {
+    clauses.push('t.occurred_at < ?');
+    params.push(opts.to);
+  }
+
+  const q = opts.query.trim();
+  if (q) {
+    const like = `%${q}%`;
+    const amount = q.replace(/[\s,]/g, '');
+    clauses.push(
+      amount
+        ? `(t.note LIKE ? OR a.name LIKE ? OR ta.name LIKE ? OR c.name LIKE ? OR cat.name LIKE ?
+            OR printf('%.2f', t.amount_minor / 100.0) LIKE ?)`
+        : '(t.note LIKE ? OR a.name LIKE ? OR ta.name LIKE ? OR c.name LIKE ? OR cat.name LIKE ?)',
+    );
+    params.push(like, like, like, like, like, ...(amount ? [`%${amount}%`] : []));
+  }
+
+  return getDb().getAllSync<TxView>(
+    `${TX_SELECT} WHERE ${clauses.join(' AND ')} ORDER BY t.occurred_at DESC, t.created_at DESC LIMIT ?`,
+    [...params, opts.limit ?? 200],
   );
 }
 

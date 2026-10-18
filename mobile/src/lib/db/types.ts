@@ -161,3 +161,15 @@ export interface CategoryTotal {
   category: string | null;
   total: number;
 }
+
+/** Search + filter options for the entry search screen. */
+export interface TxSearchOpts {
+  /** free text — matched against note, person, place, category and amount */
+  query: string;
+  /** which slice of entries to show; 'all' shows everything */
+  kind?: 'all' | 'expense' | 'income' | 'transfer' | 'udhaar';
+  /** [from, to) on occurred_at; omit both for any time */
+  from?: number;
+  to?: number;
+  limit?: number;
+}
