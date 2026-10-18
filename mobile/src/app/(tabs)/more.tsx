@@ -33,6 +33,12 @@ export default function MoreScreen() {
           onPress={() => router.push('/budgets')}
         />
         <ListRow
+          icon="repeat"
+          title="Recurring bills"
+          subtitle="Rent, internet, fees — one-tap logging"
+          onPress={() => router.push('/recurring')}
+        />
+        <ListRow
           icon="cloud"
           title="Your data"
           subtitle={`${counts} · backup & restore`}

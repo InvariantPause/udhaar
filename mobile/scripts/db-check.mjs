@@ -272,6 +272,22 @@ step('budgets: spent counts live expenses in the period only', () => {
   run(`DELETE FROM transactions WHERE id = 'tx-bud'`);
 });
 
+step('recurring: due list respects the day and done_period', () => {
+  run(`INSERT INTO recurring (id, name, type, amount_minor, currency, account_id, category_id, due_day, done_period, created_at) VALUES ('rec-1', 'Internet', 'expense', 250000, 'PKR', 'acc-cash', 'cat-wifi', 5, NULL, 7000)`);
+  const due = (day, period) =>
+    one(`SELECT COUNT(*) AS n FROM recurring WHERE deleted_at IS NULL AND due_day <= ? AND (done_period IS NULL OR done_period <> ?)`, day, period).n;
+  assert.equal(due(4, '2026-10'), 0); // day not here yet
+  assert.equal(due(5, '2026-10'), 1); // due today
+  run(`UPDATE recurring SET done_period = '2026-10' WHERE id = 'rec-1'`);
+  assert.equal(due(20, '2026-10'), 0); // handled this month
+  assert.equal(due(20, '2026-11'), 1); // next month reopens
+  run(`UPDATE recurring SET deleted_at = 9000 WHERE id = 'rec-1'`);
+  assert.equal(due(20, '2026-11'), 0); // deleted bills never nag
+  assert.throws(() =>
+    run(`INSERT INTO recurring (id, name, type, amount_minor, currency, due_day, created_at) VALUES ('rec-bad', 'X', 'transfer', 100, 'PKR', 5, 7000)`),
+  );
+});
+
 let impSeq = 0;
 const imported = legacyToRows(legacyBackup, () => `imp-${++impSeq}`, 5000);
 const impAccount = (name) => imported.tables.accounts.find((a) => a.name === name);
@@ -345,6 +361,21 @@ step('backup: budgets survive the round trip and damaged rows are dropped', () =
   const damaged = normalizeNewTables({ budgets: [{ id: 'y', category_id: '', amount_minor: 0 }] });
   assert.equal(damaged.tables.budgets.length, 0);
   assert.match(damaged.warnings.join(' '), /budget/);
+});
+
+step('backup: bills survive the round trip and due_day is clamped', () => {
+  const tables = {
+    ...imported.tables,
+    recurring: [
+      { id: 'rec-x', name: 'Internet', type: 'expense', amount_minor: 250000, currency: 'PKR', account_id: 'acc-cash', category_id: 'cat-wifi', due_day: 40, done_period: null, deleted_at: null, created_at: 7000 },
+    ],
+  };
+  const payload = buildBackupPayload(tables, 7000, SCHEMA_VERSION);
+  const desc = describeBackup(payload);
+  assert.equal(desc.counts.recurring, 1);
+  const norm = normalizeNewTables(payload.tables);
+  assert.equal(norm.tables.recurring.length, 1);
+  assert.equal(norm.tables.recurring[0].due_day, 28); // clamped into range
 });
 
 step('backup: bad files are refused with reasons', () => {

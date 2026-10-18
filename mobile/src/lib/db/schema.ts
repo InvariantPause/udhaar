@@ -18,7 +18,7 @@
  *   places) are nullable timestamps — the only "deleted" flags allowed.
  */
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Migration n (index n-1) runs in order against `PRAGMA user_version`. */
 export const MIGRATIONS: string[][] = [
@@ -129,6 +129,26 @@ export const MIGRATIONS: string[][] = [
 
     CREATE UNIQUE INDEX idx_budgets_cat_cur
       ON budgets (category_id, currency) WHERE deleted_at IS NULL;
+    `,
+  ],
+  [
+    // ---- v3: recurring bills -----------------------------------------------
+    // Rollback note: dev-only rollback is "DROP TABLE recurring;" plus
+    // PRAGMA user_version = 2. Never ship a rollback that drops user rows.
+    `
+    CREATE TABLE recurring (
+      id           TEXT PRIMARY KEY,
+      name         TEXT NOT NULL,
+      type         TEXT NOT NULL CHECK (type IN ('expense', 'income')),
+      amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
+      currency     TEXT NOT NULL,
+      account_id   TEXT,
+      category_id  TEXT,
+      due_day      INTEGER NOT NULL CHECK (due_day BETWEEN 1 AND 28),
+      done_period  TEXT,
+      deleted_at   INTEGER,
+      created_at   INTEGER NOT NULL
+    );
     `,
   ],
 ];

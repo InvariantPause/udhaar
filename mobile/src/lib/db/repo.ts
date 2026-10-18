@@ -14,6 +14,9 @@ import type {
   ContactWithBalances,
   CurrencySummary,
   ReportTotals,
+  RecurringInput,
+  RecurringRow,
+  RecurringView,
   TransactionRow,
   TxInput,
   TxSearchOpts,
@@ -477,6 +480,115 @@ export function deleteBudget(id: string): number {
 
 export function restoreBudget(id: string, at: number): void {
   getDb().runSync(`UPDATE budgets SET deleted_at = NULL WHERE id = ? AND deleted_at = ?`, [id, at]);
+}
+
+// ---------------------------------------------------------------- recurring bills
+
+const RECURRING_COLS = `r.id, r.name, r.type, r.amount_minor, r.currency, r.account_id, r.category_id, r.due_day, r.done_period, r.deleted_at, r.created_at`;
+
+/** Every live bill, soonest due day first. */
+export function listRecurring(): RecurringView[] {
+  return getDb().getAllSync<RecurringView>(
+    `SELECT ${RECURRING_COLS}, a.name AS account_name
+     FROM recurring r
+     LEFT JOIN accounts a ON a.id = r.account_id
+     WHERE r.deleted_at IS NULL
+     ORDER BY r.due_day, r.created_at`,
+  );
+}
+
+/** Live bills whose day has arrived and that this month hasn't handled yet. */
+export function listDueRecurring(day: number, period: string): RecurringView[] {
+  return getDb().getAllSync<RecurringView>(
+    `SELECT ${RECURRING_COLS}, a.name AS account_name
+     FROM recurring r
+     LEFT JOIN accounts a ON a.id = r.account_id
+     WHERE r.deleted_at IS NULL AND r.due_day <= ? AND (r.done_period IS NULL OR r.done_period <> ?)
+     ORDER BY r.due_day, r.created_at`,
+    [day, period],
+  );
+}
+
+export function saveRecurring(input: RecurringInput): string {
+  const name = input.name.trim();
+  const amount = Math.round(Math.abs(input.amount_minor));
+  if (!name) throw new Error('Name the bill first');
+  if (!(amount > 0)) throw new Error('Enter an amount first');
+  if (!input.account_id) throw new Error('Pick a money place first');
+  const day = Math.min(Math.max(Math.round(input.due_day) || 1, 1), 28);
+  const d = getDb();
+  if (input.id) {
+    const live = d.getFirstSync<{ id: string }>(`SELECT id FROM recurring WHERE id = ? AND deleted_at IS NULL`, [input.id]);
+    if (live) {
+      d.runSync(
+        `UPDATE recurring SET name = ?, type = ?, amount_minor = ?, currency = ?, account_id = ?, category_id = ?, due_day = ? WHERE id = ?`,
+        [name, input.type, amount, input.currency, input.account_id, input.category_id, day, input.id],
+      );
+      return input.id;
+    }
+  }
+  const id = newId();
+  d.runSync(
+    `INSERT INTO recurring (id, name, type, amount_minor, currency, account_id, category_id, due_day, done_period, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
+    [id, name, input.type, amount, input.currency, input.account_id, input.category_id, day, Date.now()],
+  );
+  return id;
+}
+
+/**
+ * Log the bill as a real entry and close the month — one transaction, so the
+ * entry and the bookkeeping can never disagree. Returns what undo needs.
+ */
+export function logRecurring(id: string, period: string): { txId: string; previous: string | null } {
+  const d = getDb();
+  const bill = d.getFirstSync<RecurringRow>(`SELECT * FROM recurring WHERE id = ? AND deleted_at IS NULL`, [id]);
+  if (!bill) throw new Error('That bill is gone');
+  const txId = newId();
+  const now = Date.now();
+  d.withTransactionSync(() => {
+    d.runSync(
+      `INSERT INTO transactions (id, type, amount_minor, currency, account_id, to_account_id, category_id, contact_id, note, occurred_at, created_at, deleted_at)
+       VALUES (?, ?, ?, ?, ?, NULL, ?, NULL, ?, ?, ?, NULL)`,
+      [txId, bill.type, bill.amount_minor, bill.currency, bill.account_id, bill.category_id, bill.name, now, now],
+    );
+    d.runSync(`UPDATE recurring SET done_period = ? WHERE id = ?`, [period, id]);
+  });
+  return { txId, previous: bill.done_period };
+}
+
+/** Undo a log: soft-delete the entry and reopen the month. */
+export function undoLogRecurring(id: string, txId: string, previous: string | null): void {
+  const d = getDb();
+  d.withTransactionSync(() => {
+    d.runSync(`UPDATE transactions SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`, [Date.now(), txId]);
+    d.runSync(`UPDATE recurring SET done_period = ? WHERE id = ?`, [previous, id]);
+  });
+}
+
+/** Close the month without logging; returns the previous period for undo. */
+export function skipRecurring(id: string, period: string): string | null {
+  const d = getDb();
+  const previous =
+    d.getFirstSync<{ done_period: string | null }>(`SELECT done_period FROM recurring WHERE id = ? AND deleted_at IS NULL`, [id])
+      ?.done_period ?? null;
+  d.runSync(`UPDATE recurring SET done_period = ? WHERE id = ?`, [period, id]);
+  return previous;
+}
+
+export function restoreRecurringPeriod(id: string, previous: string | null): void {
+  getDb().runSync(`UPDATE recurring SET done_period = ? WHERE id = ?`, [previous, id]);
+}
+
+/** Soft-delete; returns the timestamp that undo needs. */
+export function deleteRecurring(id: string): number {
+  const at = Date.now();
+  getDb().runSync(`UPDATE recurring SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`, [at, id]);
+  return at;
+}
+
+export function restoreRecurring(id: string, at: number): void {
+  getDb().runSync(`UPDATE recurring SET deleted_at = NULL WHERE id = ? AND deleted_at = ?`, [id, at]);
 }
 
 // ---------------------------------------------------------------- summary

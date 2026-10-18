@@ -198,3 +198,38 @@ export interface BudgetWithSpent extends BudgetRow {
   /** expenses for this category + currency inside the period */
   spent: number;
 }
+
+export type RecurringType = 'expense' | 'income';
+
+export interface RecurringRow {
+  id: string;
+  name: string;
+  type: RecurringType;
+  amount_minor: number;
+  currency: string;
+  account_id: string | null;
+  category_id: string | null;
+  /** 1–28, so every month has that day */
+  due_day: number;
+  /** 'YYYY-MM' of the month already handled (logged or skipped); null until then */
+  done_period: string | null;
+  deleted_at: number | null;
+  created_at: number;
+}
+
+export interface RecurringInput {
+  /** omit to create; pass an existing id to edit it */
+  id?: string;
+  name: string;
+  type: RecurringType;
+  amount_minor: number;
+  currency: string;
+  account_id: string;
+  category_id: string | null;
+  due_day: number;
+}
+
+/** A bill joined with its place's name for display. */
+export interface RecurringView extends RecurringRow {
+  account_name: string | null;
+}

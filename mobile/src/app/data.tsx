@@ -145,6 +145,7 @@ export default function DataScreen() {
             {pending.desc.counts.accounts} {pending.desc.counts.accounts === 1 ? 'place' : 'places'} ·{' '}
             {pending.desc.counts.categories} categories
             {pending.desc.counts.budgets > 0 ? ` · ${pending.desc.counts.budgets} budgets` : ''}
+            {pending.desc.counts.recurring > 0 ? ` · ${pending.desc.counts.recurring} bills` : ''}
           </Text>
           {pending.desc.currencies.length > 0 ? (
             <Text style={styles.note}>Currencies: {pending.desc.currencies.join(', ')}</Text>

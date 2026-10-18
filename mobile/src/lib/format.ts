@@ -55,6 +55,17 @@ export function monthRange(): { from: number; to: number } {
   };
 }
 
+/** "YYYY-MM" key for monthly bookkeeping (recurring bills, budget months). */
+export function monthKey(ts: number = Date.now()): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** 1-based day of the month, so screens never call `new Date()` mid-render. */
+export function dayOfMonth(ts: number = Date.now()): number {
+  return new Date(ts).getDate();
+}
+
 /** The last `count` days (today first) for the capture sheet's date strip. */
 export function recentDays(count = 7): { ts: number; label: string }[] {
   const out: { ts: number; label: string }[] = [];

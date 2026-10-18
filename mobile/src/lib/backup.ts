@@ -16,6 +16,7 @@ export function exportBackupJson(): { fileName: string; json: string } {
     contacts: d.getAllSync(`SELECT * FROM contacts ORDER BY created_at`),
     transactions: d.getAllSync(`SELECT * FROM transactions ORDER BY occurred_at, created_at`),
     budgets: d.getAllSync(`SELECT * FROM budgets ORDER BY created_at`),
+    recurring: d.getAllSync(`SELECT * FROM recurring ORDER BY created_at`),
   };
   const payload = buildBackupPayload(tables, Date.now(), SCHEMA_VERSION);
   const date = new Date().toISOString().slice(0, 10);
@@ -60,7 +61,7 @@ export function runImport(json: string, mode: 'replace' | 'merge'): ImportResult
 
   d.withTransactionSync(() => {
     if (mode === 'replace') {
-      d.execSync(`DELETE FROM transactions; DELETE FROM contacts; DELETE FROM categories; DELETE FROM accounts; DELETE FROM budgets;`);
+      d.execSync(`DELETE FROM transactions; DELETE FROM contacts; DELETE FROM categories; DELETE FROM accounts; DELETE FROM budgets; DELETE FROM recurring;`);
     }
     for (const a of tables.accounts) {
       add(
@@ -101,6 +102,15 @@ export function runImport(json: string, mode: 'replace' | 'merge'): ImportResult
         d.runSync(
           `INSERT OR IGNORE INTO budgets (id, category_id, currency, amount_minor, deleted_at, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
           [b.id, b.category_id, b.currency, b.amount_minor, b.deleted_at, b.created_at],
+        ).changes,
+      );
+    }
+    for (const r of tables.recurring ?? []) {
+      add(
+        d.runSync(
+          `INSERT OR IGNORE INTO recurring (id, name, type, amount_minor, currency, account_id, category_id, due_day, done_period, deleted_at, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [r.id, r.name, r.type, r.amount_minor, r.currency, r.account_id, r.category_id, r.due_day, r.done_period, r.deleted_at, r.created_at],
         ).changes,
       );
     }

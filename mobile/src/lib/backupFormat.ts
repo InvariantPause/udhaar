@@ -69,12 +69,27 @@ export interface BackupBudgetRow {
   created_at: number;
 }
 
+export interface BackupRecurringRow {
+  id: string;
+  name: string;
+  type: string;
+  amount_minor: number;
+  currency: string;
+  account_id: string | null;
+  category_id: string | null;
+  due_day: number;
+  done_period: string | null;
+  deleted_at: number | null;
+  created_at: number;
+}
+
 export interface BackupTables {
   accounts: BackupAccountRow[];
   categories: BackupCategoryRow[];
   contacts: BackupContactRow[];
   transactions: BackupTxRow[];
   budgets: BackupBudgetRow[];
+  recurring: BackupRecurringRow[];
 }
 
 export interface BackupFile {
@@ -92,6 +107,7 @@ export interface BackupCounts {
   contacts: number;
   transactions: number;
   budgets: number;
+  recurring: number;
   skippedSubscriptions: number;
   skippedBudgets: number;
 }
@@ -106,7 +122,7 @@ export interface BackupDescription {
 }
 
 export function emptyCounts(): BackupCounts {
-  return { accounts: 0, categories: 0, contacts: 0, transactions: 0, budgets: 0, skippedSubscriptions: 0, skippedBudgets: 0 };
+  return { accounts: 0, categories: 0, contacts: 0, transactions: 0, budgets: 0, recurring: 0, skippedSubscriptions: 0, skippedBudgets: 0 };
 }
 
 export function buildBackupPayload(tables: BackupTables, exportedAt: number, schemaVersion = SCHEMA_VERSION): BackupFile {
@@ -122,6 +138,7 @@ export function buildBackupPayload(tables: BackupTables, exportedAt: number, sch
       contacts: tables.contacts.map((r) => ({ ...r })),
       transactions: tables.transactions.map((r) => ({ ...r })),
       budgets: (tables.budgets ?? []).map((r) => ({ ...r })),
+      recurring: (tables.recurring ?? []).map((r) => ({ ...r })),
     },
   };
 }
@@ -157,6 +174,7 @@ export function describeBackup(data: unknown): BackupDescription {
         contacts: tables.contacts.length,
         transactions: tables.transactions.length,
         budgets: tables.budgets.length,
+        recurring: tables.recurring.length,
       },
       currencies: currenciesOf(tables),
       warnings,
@@ -297,7 +315,34 @@ export function normalizeNewTables(raw: unknown): { tables: BackupTables; warnin
   }
   if (bad) warnings.push(`Skipped ${bad} damaged budget rows`);
 
-  return { tables: { accounts, categories, contacts, transactions, budgets }, warnings };
+  const recurring: BackupRecurringRow[] = [];
+  bad = 0;
+  for (const r of records(src.recurring)) {
+    const id = str(r.id);
+    const name = str(r.name);
+    const type = str(r.type);
+    const amount = int(r.amount_minor, 0);
+    if (!id || !name || !(type === 'expense' || type === 'income') || !(amount > 0)) {
+      bad++;
+      continue;
+    }
+    recurring.push({
+      id,
+      name,
+      type,
+      amount_minor: amount,
+      currency: str(r.currency) || 'PKR',
+      account_id: nullableStr(r.account_id),
+      category_id: nullableStr(r.category_id),
+      due_day: Math.min(Math.max(int(r.due_day, 1), 1), 28),
+      done_period: nullableStr(r.done_period),
+      deleted_at: nullableInt(r.deleted_at),
+      created_at: int(r.created_at, 0),
+    });
+  }
+  if (bad) warnings.push(`Skipped ${bad} damaged bill rows`);
+
+  return { tables: { accounts, categories, contacts, transactions, budgets, recurring }, warnings };
 }
 
 // ---------------------------------------------------------------- legacy format
@@ -456,7 +501,7 @@ export function legacyToRows(
 
   if (skipped > 0) warnings.push(`Skipped ${skipped} damaged rows from the old backup`);
 
-  return { tables: { accounts, categories, contacts, transactions, budgets: [] }, warnings };
+  return { tables: { accounts, categories, contacts, transactions, budgets: [], recurring: [] }, warnings };
 }
 
 // ---------------------------------------------------------------- helpers

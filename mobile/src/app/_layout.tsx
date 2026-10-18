@@ -57,6 +57,7 @@ export default function RootLayout() {
                   <Stack.Screen name="data" />
                   <Stack.Screen name="search" />
                   <Stack.Screen name="budgets" />
+                  <Stack.Screen name="recurring" />
                   <Stack.Screen name="design-kit" />
                 </Stack>
               </SheetHost>

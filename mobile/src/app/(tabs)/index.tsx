@@ -10,8 +10,8 @@ import { colors, haptic, radius, text as typography } from '@/design';
 import { AccountSheet } from '@/features/AccountSheet';
 import { TransactionSheet } from '@/features/TransactionSheet';
 import { accountIcon, txDisplayMinor, txIcon, txShowsSign, txSubtitle, txTitle } from '@/features/txDisplay';
-import { repo, useDb, useDbQuery, type CurrencySummary, type TxView } from '@/lib/db';
-import { monthRange } from '@/lib/format';
+import { repo, useDb, useDbQuery, type CurrencySummary, type RecurringView, type TxView } from '@/lib/db';
+import { dayOfMonth, monthKey, monthRange } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
 import { useSheet } from '@/lib/sheet';
 import { useToast } from '@/lib/toast';
@@ -33,6 +33,9 @@ export default function TodayScreen() {
   const budgetWatch = useDbQuery(() => repo.listBudgets(from, to)).filter(
     (b) => b.spent >= b.amount_minor * 0.8,
   );
+  // Bills whose day has come this month and that haven't been handled yet.
+  const period = monthKey();
+  const dueBills = useDbQuery(() => repo.listDueRecurring(dayOfMonth(), period));
 
   const deleteTx = (t: TxView) => {
     const at = repo.deleteTx(t.id);
@@ -42,6 +45,36 @@ export default function TodayScreen() {
       actionLabel: 'Undo',
       onAction: () => {
         repo.restoreTx(t.id, at);
+        bump();
+      },
+    });
+  };
+
+  const logBill = (b: RecurringView) => {
+    try {
+      const { txId, previous } = repo.logRecurring(b.id, period);
+      bump();
+      haptic.success();
+      toast.show(`${b.name} logged`, {
+        actionLabel: 'Undo',
+        onAction: () => {
+          repo.undoLogRecurring(b.id, txId, previous);
+          bump();
+        },
+      });
+    } catch {
+      toast.show('Could not log the bill');
+    }
+  };
+
+  const skipBill = (b: RecurringView) => {
+    const previous = repo.skipRecurring(b.id, period);
+    bump();
+    haptic.press();
+    toast.show(`${b.name} skipped this month`, {
+      actionLabel: 'Undo',
+      onAction: () => {
+        repo.restoreRecurringPeriod(b.id, previous);
         bump();
       },
     });
@@ -71,28 +104,55 @@ export default function TodayScreen() {
         summary.map((s) => <MoneyCard key={s.currency} summary={s} />)
       )}
 
+      {dueBills.length > 0 ? (
+        <>
+          <Text style={styles.sectionTitle}>Due</Text>
+          <View style={styles.section}>
+            {dueBills.map((b, i) => (
+              <View key={b.id} style={[styles.dueRow, i < dueBills.length - 1 && styles.dueLine]}>
+                <Pressable style={styles.dueInfo} onLongPress={() => skipBill(b)} delayLongPress={350}>
+                  <Text style={styles.dueName} numberOfLines={1}>
+                    {b.name}
+                  </Text>
+                  <Text style={styles.dueSub} numberOfLines={1}>
+                    Day {b.due_day} · {b.account_name ?? 'Removed place'}
+                  </Text>
+                </Pressable>
+                <Money minor={b.amount_minor} currency={b.currency} style={styles.dueMoney} />
+                <Pressable style={styles.logPill} onPress={() => logBill(b)}>
+                  <Text style={styles.logLabel}>Log</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
+
       {budgetWatch.length > 0 ? (
-        <Pressable
-          style={styles.watchCard}
-          onPress={() => {
-            haptic.tap();
-            router.push('/reports');
-          }}
-        >
-          <Text style={styles.watchTitle}>Budget watch</Text>
-          {budgetWatch.map((b) => (
-            <View key={b.id} style={styles.watchRow}>
-              <Text style={styles.watchName} numberOfLines={1}>
-                {b.category_name ?? 'Removed category'}
-              </Text>
-              <Text style={styles.watchValue}>
-                {b.spent > b.amount_minor
-                  ? `${formatMoney(b.spent - b.amount_minor, b.currency)} over`
-                  : `${Math.round((b.spent / b.amount_minor) * 100)}%`}
-              </Text>
-            </View>
-          ))}
-        </Pressable>
+        <>
+          <Text style={styles.sectionTitle}>Budget watch</Text>
+          <View style={styles.section}>
+            {budgetWatch.map((b, i) => (
+              <Pressable
+                key={b.id}
+                onPress={() => {
+                  haptic.tap();
+                  router.push('/reports');
+                }}
+                style={[styles.watchRow, i < budgetWatch.length - 1 && styles.watchLine]}
+              >
+                <Text style={styles.watchName} numberOfLines={1}>
+                  {b.category_name ?? 'Removed category'}
+                </Text>
+                <Text style={styles.watchValue}>
+                  {b.spent > b.amount_minor
+                    ? `${formatMoney(b.spent - b.amount_minor, b.currency)} over`
+                    : `${Math.round((b.spent / b.amount_minor) * 100)}%`}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
       ) : null}
 
       <Text style={styles.sectionTitle}>Recent</Text>
@@ -195,18 +255,25 @@ const styles = StyleSheet.create({
   udhaarMoney: { fontSize: 15 },
   udhaarTitle: { ...typography.section, fontSize: 10.5, color: colors.muted2 },
   sectionTitle: { ...typography.section, marginTop: 14, marginBottom: 10 },
-  watchCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.lg,
-    padding: 18,
-    gap: 8,
+  watchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   },
-  watchTitle: { ...typography.section, fontSize: 10.5, color: colors.muted2 },
-  watchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  watchLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line2 },
   watchName: { ...typography.body, color: colors.muted, flex: 1, minWidth: 0 },
   watchValue: { ...typography.label },
+  dueRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingVertical: 14 },
+  dueLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line2 },
+  dueInfo: { flex: 1, minWidth: 0, gap: 3 },
+  dueName: { ...typography.body },
+  dueSub: { ...typography.caption },
+  dueMoney: { fontSize: 15 },
+  logPill: { backgroundColor: colors.white, borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 8 },
+  logLabel: { ...typography.label, color: colors.inverse },
   section: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
