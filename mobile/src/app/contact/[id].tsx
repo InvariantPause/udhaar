@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Share, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
@@ -9,6 +9,7 @@ import { Screen } from '@/components/Screen';
 import { colors, haptic, radius, text as typography } from '@/design';
 import { ContactSheet } from '@/features/ContactSheet';
 import { TransactionSheet } from '@/features/TransactionSheet';
+import { buildStatement, statementSubject } from '@/features/statement';
 import { txIcon, txPersonMinor, txSubtitle, txTitle } from '@/features/txDisplay';
 import { repo, useDb, useDbQuery, type TxView } from '@/lib/db';
 import { useSheet } from '@/lib/sheet';
@@ -55,12 +56,32 @@ export default function ContactScreen() {
     sheet.open(<TransactionSheet initialType={type} initialContactId={c.id} fixedPerson />);
   };
 
+  const shareStatement = async () => {
+    if (txs.length === 0) {
+      toast.show('Nothing to share yet');
+      return;
+    }
+    try {
+      await Share.share({
+        message: buildStatement({ name: c.name, balances: contact.balances, txs }),
+        title: statementSubject(c.name),
+      });
+    } catch {
+      toast.show('Could not open the share sheet');
+    }
+  };
+
   return (
     <Screen
       title={c.name}
       sub={c.phone ?? undefined}
       back
-      right={<IconButton icon="edit" label="Edit person" onPress={() => sheet.open(<ContactSheet contactId={c.id} />)} />}
+      right={
+        <View style={styles.headerActions}>
+          <IconButton icon="share" label="Share statement" onPress={shareStatement} />
+          <IconButton icon="edit" label="Edit person" onPress={() => sheet.open(<ContactSheet contactId={c.id} />)} />
+        </View>
+      }
     >
       <View style={styles.balanceCard}>
         {contact.balances.length === 0 ? (
@@ -135,6 +156,7 @@ export default function ContactScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerActions: { flexDirection: 'row', gap: 8 },
   balanceCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,

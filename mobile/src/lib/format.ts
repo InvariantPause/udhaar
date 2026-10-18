@@ -27,6 +27,25 @@ export function formatDay(ts: number): string {
   return d.getFullYear() === new Date(now).getFullYear() ? base : `${base} ${d.getFullYear()}`;
 }
 
+/** "18 Oct 2026" — full date for statements and headers. */
+export function formatDate(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** "today" · "yesterday" · "N days ago" — for backup health. */
+export function formatAgo(ts: number): string {
+  const days = Math.floor((startOfDay(Date.now()) - startOfDay(ts)) / DAY);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
+}
+
+/** True when `ts` is more than `days` whole days in the past. */
+export function olderThan(ts: number, days: number): boolean {
+  return startOfDay(Date.now()) - startOfDay(ts) > days * DAY;
+}
+
 /** The last `count` days (today first) for the capture sheet's date strip. */
 export function recentDays(count = 7): { ts: number; label: string }[] {
   const out: { ts: number; label: string }[] = [];
