@@ -14,6 +14,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 import { colors } from '@/design';
+import { AppLockGate } from '@/features/AppLockGate';
 import { DbProvider } from '@/lib/db';
 import { SheetHost } from '@/lib/sheet';
 import { ToastHost } from '@/lib/toast';
@@ -40,28 +41,31 @@ export default function RootLayout() {
       <KeyboardProvider>
         <SafeAreaProvider>
           <DbProvider>
-            {/* Toast wraps the sheet host so an undo fired while a sheet closes still paints above it. */}
-            <ToastHost>
-              <SheetHost>
-                <StatusBar style="light" />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: colors.bg },
-                    animation: 'slide_from_right',
-                  }}
-                >
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="accounts" />
-                  <Stack.Screen name="contact/[id]" />
-                  <Stack.Screen name="data" />
-                  <Stack.Screen name="search" />
-                  <Stack.Screen name="budgets" />
-                  <Stack.Screen name="recurring" />
-                  <Stack.Screen name="design-kit" />
-                </Stack>
-              </SheetHost>
-            </ToastHost>
+            {/* Lock covers everything — sheets and toasts included. */}
+            <AppLockGate>
+              {/* Toast wraps the sheet host so an undo fired while a sheet closes still paints above it. */}
+              <ToastHost>
+                <SheetHost>
+                  <StatusBar style="light" />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: colors.bg },
+                      animation: 'slide_from_right',
+                    }}
+                  >
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="accounts" />
+                    <Stack.Screen name="contact/[id]" />
+                    <Stack.Screen name="data" />
+                    <Stack.Screen name="search" />
+                    <Stack.Screen name="budgets" />
+                    <Stack.Screen name="recurring" />
+                    <Stack.Screen name="design-kit" />
+                  </Stack>
+                </SheetHost>
+              </ToastHost>
+            </AppLockGate>
           </DbProvider>
         </SafeAreaProvider>
       </KeyboardProvider>
