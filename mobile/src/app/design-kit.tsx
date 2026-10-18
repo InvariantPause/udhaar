@@ -215,6 +215,7 @@ const ICON_NAMES: IconName[] = [
   'bank',
   'phone',
   'box',
+  'calendar',
 ];
 
 const styles = StyleSheet.create({

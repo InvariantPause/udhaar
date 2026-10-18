@@ -162,6 +162,14 @@ const glyphs = {
       <Path d="M7 11V7a5 5 0 0 1 10 0v4" />
     </>
   ),
+  calendar: (
+    <>
+      <Rect x="3" y="4" width="18" height="18" rx="2" />
+      <Line x1="16" y1="2" x2="16" y2="6" />
+      <Line x1="8" y1="2" x2="8" y2="6" />
+      <Line x1="3" y1="10" x2="21" y2="10" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof glyphs;

@@ -5,7 +5,8 @@
  *   expense/income/transfer move place balances,
  *   lend raises what a person owes, borrow lowers it,
  *   repay_in/repay_out actually settle the udhaar,
- *   soft-delete + undo + contact-cascade all leave balances correct.
+ *   soft-delete + undo + contact-cascade all leave balances correct,
+ *   the capture date grid stays a Monday-first 6×7 that pages cleanly.
  *
  * Run: node scripts/db-check.mjs   (from mobile/)
  */
@@ -13,6 +14,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { MIGRATIONS, SCHEMA_VERSION, seedStatements } from '../src/lib/db/schema.ts';
 import { buildBackupPayload, describeBackup, legacyToRows, normalizeNewTables } from '../src/lib/backupFormat.ts';
+import { addMonths, formatMonth, monthGrid, startOfMonth } from '../src/lib/format.ts';
 
 const db = new DatabaseSync(':memory:');
 
@@ -384,6 +386,36 @@ step('backup: bad files are refused with reasons', () => {
   const newer = describeBackup({ app: 'udhaar', kind: 'backup', schemaVersion: 999, tables: {} });
   assert.equal(newer.ok, false);
   assert.match(newer.error, /newer version/);
+});
+
+// ---------------------------------------------------------------- date picker grid
+
+step('dates: month grid is a stable Monday-first 6×7 around the month', () => {
+  const flat = monthGrid(new Date(2026, 1, 1).getTime()).flat(); // Feb 2026 starts on a Sunday
+  assert.equal(flat.length, 42, 'always six weeks');
+  assert.equal(new Date(flat[0]).getDay(), 1, 'starts on a Monday');
+  for (let i = 1; i < flat.length; i++) {
+    const next = new Date(flat[i - 1]);
+    next.setDate(next.getDate() + 1);
+    assert.equal(flat[i], next.getTime(), `cell ${i} is the local midnight after ${i - 1}`);
+  }
+  assert.equal(flat.filter((ts) => new Date(ts).getMonth() === 1).length, 28, 'holds every day of the month');
+});
+
+step('dates: month grid handles leap February without spilling days', () => {
+  const flat = monthGrid(new Date(2028, 1, 1).getTime()).flat();
+  assert.equal(flat.filter((ts) => new Date(ts).getMonth() === 1).length, 29);
+});
+
+step('dates: month paging crosses year boundaries and skips no month', () => {
+  const dec = new Date(2026, 11, 1).getTime();
+  const jan = addMonths(dec, 1);
+  assert.equal(new Date(jan).getMonth(), 0);
+  assert.equal(new Date(jan).getFullYear(), 2027);
+  assert.equal(addMonths(jan, -1), dec);
+  assert.equal(addMonths(dec, -13), new Date(2025, 10, 1).getTime());
+  assert.equal(startOfMonth(new Date(2026, 11, 17).getTime()), dec);
+  assert.equal(formatMonth(dec), 'Dec 2026');
 });
 
 console.log('db-check: all invariants hold');

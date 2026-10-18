@@ -1,4 +1,4 @@
-/** Date helpers for rows and the 7-day capture strip. No Intl dependency. */
+/** Date helpers for rows, the 7-day capture strip and the month picker. No Intl dependency. */
 
 const DAY = 86_400_000;
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
@@ -12,6 +12,11 @@ export function startOfDay(ts: number): number {
 
 export function sameDay(a: number, b: number): boolean {
   return startOfDay(a) === startOfDay(b);
+}
+
+/** Local midnight of today — keeps clock reads out of component render. */
+export function startOfToday(): number {
+  return startOfDay(Date.now());
 }
 
 /** "Today" · "Yesterday" · "Fri 15 Aug" (adds the year when not this year). */
@@ -78,6 +83,44 @@ export function recentDays(count = 7): { ts: number; label: string }[] {
     out.push({ ts, label });
   }
   return out;
+}
+
+/** First instant of the month containing `ts`. */
+export function startOfMonth(ts: number): number {
+  const d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+}
+
+/** First instant of the month `n` months away from `ts` (day-of-month is ignored). */
+export function addMonths(ts: number, n: number): number {
+  const d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth() + n, 1).getTime();
+}
+
+/** "Oct 2026" — month header for the date picker. */
+export function formatMonth(ts: number): string {
+  const d = new Date(ts);
+  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
+ * The 6×7 day grid for `monthTs` (Monday-first, matching CLDR for PK).
+ * Cells are local midnights; adjacent-month days are included so the grid
+ * keeps a fixed shape while paging.
+ */
+export function monthGrid(monthTs: number): number[][] {
+  const first = new Date(monthTs);
+  const lead = (first.getDay() + 6) % 7;
+  const weeks: number[][] = [];
+  for (let w = 0; w < 6; w++) {
+    const week: number[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(first.getFullYear(), first.getMonth(), 1 - lead + w * 7 + i);
+      week.push(d.getTime());
+    }
+    weeks.push(week);
+  }
+  return weeks;
 }
 
 /** Pick a day for an entry: keeps the current time-of-day so ordering stays natural. */
