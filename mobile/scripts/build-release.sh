@@ -2,10 +2,9 @@
 # Builds the standalone release APK (embedded Hermes bundle — the phone needs
 # no Metro) and copies it to release/ for sharing.
 #
-# Signed with the debug keystore (the RN template default), so it installs
-# over the dev build in place: same signature, existing data is kept.
-# Play Store distribution would need a real upload keystore; do that only
-# before real users exist, and export a backup first (new signature = reinstall).
+# Signed with Udhaar's private release keystore (UDHAAR_RELEASE_* properties
+# in ~/.gradle/gradle.properties; see docs/DEVELOPING.md). Fails early when
+# the key is missing so a debug-signed APK can never ship by accident.
 #
 # Toolchain (brew, no accounts): openjdk@17 + android-commandlinetools.
 # Override JAVA_HOME / ANDROID_HOME in the environment if yours differ.
@@ -22,6 +21,17 @@ if [ ! -f "$JAVA_HOME/bin/java" ]; then
 fi
 if [ ! -d "$ANDROID_HOME" ]; then
   echo "ANDROID_HOME does not point at an SDK: $ANDROID_HOME" >&2
+  exit 1
+fi
+
+GRADLE_PROPS="$HOME/.gradle/gradle.properties"
+if ! grep -q '^UDHAAR_RELEASE_STORE_FILE=' "$GRADLE_PROPS" 2>/dev/null; then
+  echo "Release keystore not configured: add the UDHAAR_RELEASE_* properties to $GRADLE_PROPS (see docs/DEVELOPING.md)." >&2
+  exit 1
+fi
+STORE_FILE="$(grep -m1 '^UDHAAR_RELEASE_STORE_FILE=' "$GRADLE_PROPS" | cut -d= -f2-)"
+if [ ! -f "$STORE_FILE" ]; then
+  echo "Release keystore missing at $STORE_FILE — restore it from your backup." >&2
   exit 1
 fi
 

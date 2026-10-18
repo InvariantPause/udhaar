@@ -11,6 +11,12 @@
     "android": {
       "package": "com.udhaar.app",
       "versionCode": 4,
+      "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#101216",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -27,6 +33,7 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
+      "./plugins/withReleaseSigning",
       [
         "expo-splash-screen",
         {
