@@ -5,10 +5,11 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
-import { colors, haptic, radius, text as typography } from '@/design';
+import { colors, fonts, haptic, radius, text as typography } from '@/design';
 import { describeBackupText, exportBackupJson, runImport } from '@/lib/backup';
 import type { BackupDescription } from '@/lib/backupFormat';
 import { repo, useDb, useDbQuery } from '@/lib/db';
+import { formatAgo, olderThan } from '@/lib/format';
 import { useToast } from '@/lib/toast';
 
 interface Pending {
@@ -21,14 +22,25 @@ interface Pending {
  * Android share sheet; import picks a file, dry-runs it (describe), and only
  * then offers Merge or Replace. Replace snapshots the current state first,
  * so even it is undoable once from the toast.
+ *
+ * Backup health: every export stamps `last_export_at`, so the card can say
+ * how long it's been — a ledger that never leaves the phone is a ledger one
+ * lost phone away from gone.
  */
 export default function DataScreen() {
   const { bump } = useDb();
   const toast = useToast();
 
   const counts = useDbQuery(() => repo.exportCounts());
+  const lastExport = useDbQuery(() => {
+    const v = repo.getMeta('last_export_at');
+    return v ? Number(v) : null;
+  });
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+
+  // Two weeks without a backup is the point where the row goes loud.
+  const lastExportStale = lastExport === null || olderThan(lastExport, 14);
 
   const onExport = async () => {
     setBusy('export');
@@ -39,6 +51,11 @@ export default function DataScreen() {
       file.create();
       file.write(json);
       await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Udhaar backup' });
+      // The file was written and handed to the share sheet — count it as a
+      // backup whether or not the user completes a send (dismissing the sheet
+      // still means the export reached them).
+      repo.setMeta('last_export_at', String(Date.now()));
+      bump();
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'Could not export the backup');
     } finally {
@@ -104,6 +121,12 @@ export default function DataScreen() {
           {counts.places} {counts.places === 1 ? 'place' : 'places'} · {counts.people}{' '}
           {counts.people === 1 ? 'person' : 'people'} · {counts.entries} {counts.entries === 1 ? 'entry' : 'entries'}
         </Text>
+        <View style={styles.health}>
+          <Text style={styles.healthLabel}>Last backup</Text>
+          <Text style={lastExportStale ? styles.healthLoud : styles.healthCalm}>
+            {lastExport ? formatAgo(lastExport) : 'never'}
+          </Text>
+        </View>
         <Button
           label={busy === 'export' ? 'Preparing…' : 'Export backup'}
           variant="primary"
@@ -166,6 +189,17 @@ const styles = StyleSheet.create({
   },
   cardTitle: { ...typography.section, fontSize: 11 },
   counts: { ...typography.body },
+  health: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line2,
+    paddingTop: 12,
+  },
+  healthLabel: { ...typography.small, color: colors.muted },
+  healthCalm: { ...typography.body, color: colors.muted },
+  healthLoud: { ...typography.body, fontFamily: fonts.semibold, color: colors.text },
   note: { ...typography.small },
   warning: { ...typography.small, color: colors.text },
   actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
